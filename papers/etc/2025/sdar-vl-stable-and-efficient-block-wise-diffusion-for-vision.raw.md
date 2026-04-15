@@ -1,0 +1,31 @@
+---
+title: "SDAR-VL: Stable and Efficient Block-wise Diffusion for Vision-Language Understanding"
+authors: ["Shuang Cheng", "Yuhua Jiang", "Zineng Zhou", "Dawei Liu", "Wang Tao", "Linfeng Zhang", "Biqing Qi", "Bowen Zhou"]
+venue: "arXiv"
+year: 2025
+venue_class: "etc"
+arxiv_id: "2512.14068"
+openreview_id: ""
+anthology_id: ""
+pdf_url: "https://arxiv.org/pdf/2512.14068v1"
+published: "2025-12-16"
+categories: ["cs.CV", "cs.AI"]
+keywords: []
+venue_source: "arxiv-only"
+hunter_fetched: "2026-04-15T05:17:33+09:00"
+---
+
+# SDAR-VL: Stable and Efficient Block-wise Diffusion for Vision-Language Understanding
+
+## Abstract
+Block-wise discrete diffusion offers an attractive balance between parallel generation and causal dependency modeling, making it a promising backbone for vision-language modeling. However, its practical adoption has been limited by high training cost, slow convergence, and instability, which have so far kept it behind strong autoregressive (AR) baselines. We present \textbf{SDAR-VL}, the first systematic application of block-wise discrete diffusion to large-scale vision-language understanding (VLU), together with an \emph{integrated framework for efficient and stable training}. This framework unifies three components: (1) \textbf{Asynchronous Block-wise Noise Scheduling} to diversify supervision within each batch; (2) \textbf{Effective Mask Ratio Scaling} for unbiased loss normalization under stochastic masking; and (3) a \textbf{Progressive Beta Noise Curriculum} that increases effective mask coverage while preserving corruption diversity. Experiments on 21 single-image, multi-image, and video benchmarks show that SDAR-VL consistently improves \emph{training efficiency}, \emph{convergence stability}, and \emph{task performance} over conventional block diffusion. On this evaluation suite, SDAR-VL sets a new state of the art among diffusion-based vision-language models and, under matched settings, matches or surpasses strong AR baselines such as LLaVA-OneVision as well as the global diffusion baseline LLaDA-V, establishing block-wise diffusion as a practical backbone for VLU.
+
+## Metadata
+- venue: arXiv
+- year: 2025
+- authors: Shuang Cheng, Yuhua Jiang, Zineng Zhou, Dawei Liu, Wang Tao, Linfeng Zhang, Biqing Qi, Bowen Zhou
+- arxiv_id: 2512.14068
+- openreview_id: 
+- anthology_id: 
+- pdf_url: https://arxiv.org/pdf/2512.14068v1
+- published: 2025-12-16

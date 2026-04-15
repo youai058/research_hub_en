@@ -1,0 +1,31 @@
+---
+title: "Indirectly Parameterized Concrete Autoencoders"
+authors: ["Alfred Nilsson", "Klas Wijk", "Sai bharath chandra Gutha", "Erik Englesson", "Alexandra Hotti", "Carlo Saccardi", "Oskar Kviman", "Jens Lagergren", "Ricardo Vinuesa Motilva", "Hossein Azizpour"]
+venue: "ICML"
+year: 2024
+venue_class: "whitelist"
+arxiv_id: ""
+openreview_id: "GqsRKEhelH"
+anthology_id: ""
+pdf_url: "https://openreview.net/pdf/048e757b568867055f04cabcab9c32f6cd74bf5d.pdf"
+published: "2024"
+categories: []
+keywords: []
+venue_source: "openreview"
+hunter_fetched: "2026-04-15T05:19:36+09:00"
+---
+
+# Indirectly Parameterized Concrete Autoencoders
+
+## Abstract
+Feature selection is a crucial task in settings where data is high-dimensional or acquiring the full set of features is costly. Recent developments in neural network-based embedded feature selection show promising results across a wide range of applications. Concrete Autoencoders (CAEs), considered state-of-the-art in embedded feature selection, may struggle to achieve stable joint optimization, hurting their training time and generalization. In this work, we identify that this instability is correlated with the CAE learning duplicate selections. To remedy this, we propose a simple and effective improvement: Indirectly Parameterized CAEs (IP-CAEs). IP-CAEs learn an embedding and a mapping from it to the Gumbel-Softmax distributions' parameters. Despite being simple to implement, IP-CAE exhibits significant and consistent improvements over CAE in both generalization and training time across several datasets for reconstruction and classification. Unlike CAE, IP-CAE effectively leverages non-linear relationships and does not require retraining the jointly optimized decoder. Furthermore, our approach is, in principle, generalizable to Gumbel-Softmax distributions beyond feature selection.
+
+## Metadata
+- venue: ICML
+- year: 2024
+- authors: Alfred Nilsson, Klas Wijk, Sai bharath chandra Gutha, Erik Englesson, Alexandra Hotti, Carlo Saccardi, Oskar Kviman, Jens Lagergren, Ricardo Vinuesa Motilva, Hossein Azizpour
+- arxiv_id: 
+- openreview_id: GqsRKEhelH
+- anthology_id: 
+- pdf_url: https://openreview.net/pdf/048e757b568867055f04cabcab9c32f6cd74bf5d.pdf
+- published: 2024

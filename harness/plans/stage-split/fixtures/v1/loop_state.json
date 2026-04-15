@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "iteration": 4,
+  "phase": "A-3",
+  "current_slug": "2026-03-01-llm-safety-meta-analysis",
+  "started_at": "2026-02-28T09:12:00+09:00",
+  "last_update": "2026-03-02T17:44:11+09:00",
+  "history": [
+    {"phase": "A-1", "event": "paper-hunter done", "at": "2026-02-28T10:00:00+09:00"},
+    {"phase": "A-2", "event": "triage done", "at": "2026-02-28T12:30:00+09:00"},
+    {"phase": "A-3", "event": "summarize in-flight", "at": "2026-03-02T17:44:11+09:00"}
+  ]
+}

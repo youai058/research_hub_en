@@ -1,0 +1,13 @@
+{
+  "version": 2,
+  "iteration": 7,
+  "phase": "E-1",
+  "current_slug": "2026-03-20-rlaif-reproducibility",
+  "started_at": "2026-03-19T14:00:00+09:00",
+  "last_update": "2026-03-21T10:11:00+09:00",
+  "history": [
+    {"phase": "C-1", "event": "experiment-plan done", "at": "2026-03-20T08:00:00+09:00"},
+    {"phase": "D", "event": "alignment", "at": "2026-03-20T15:00:00+09:00"},
+    {"phase": "E-1", "event": "code-impl in-flight", "at": "2026-03-21T10:11:00+09:00"}
+  ]
+}

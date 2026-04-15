@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "source_file": "/home1/irteam/sw/research_hub/docs/lessons-analysis.md",
+  "source_sha": "5ec08bcd1e80f256c0ecaf00cd3095ac398be68e1ceba24b237bb75500cf9145",
+  "extracted_at": "2026-04-15T09:25:27+09:00",
+  "author_agent": "lesson.py",
+  "nodes": [
+    {
+      "id": "lesson:analysis--2026-04-15-force-rule-step-index-confound",
+      "type": "Lesson",
+      "name": "force-rule 차원은 step-index와 독립적 confound",
+      "meta": {
+        "domain": "analysis",
+        "date": "2026-04-15",
+        "rule": "force-commit ablation을 보고할 때 force_rule (argmax / sampled / prophet-thresh) 차원을 별도 축으로 분리해서 보고하라. 동일 t*에서 rule에 따라 결과가 정반대일 수 있다",
+        "why": "diffusion-llm-step iter1 GSM8K n=50에서 t*=0.5T, argmax는 -24pt 드롭, prophet@0.9는 +2pt. PLAN H1의 '≤2pt drop' 예측은 prophet-style에만 적용되며 argmax는 별도 mechanism",
+        "when": "force-commit 또는 early-commit 계열 ablation 리포트 작성 시 — rule을 표 축으로 드러내지 않으면 mechanism 결론이 뒤집힌다"
+      }
+    }
+  ],
+  "edges": []
+}

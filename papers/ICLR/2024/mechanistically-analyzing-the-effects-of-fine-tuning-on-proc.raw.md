@@ -1,0 +1,32 @@
+---
+title: "Mechanistically analyzing the effects of fine-tuning on procedurally defined tasks"
+authors: ["Samyak Jain", "Robert Kirk", "Ekdeep Singh Lubana", "Robert P. Dick", "Hidenori Tanaka", "Tim Rocktäschel", "Edward Grefenstette", "David Krueger"]
+venue: "ICLR"
+year: 2024
+venue_class: "whitelist"
+arxiv_id: ""
+openreview_id: "A0HKeKl4Nl"
+anthology_id: ""
+pdf_url: "https://openreview.net/pdf/b46dce52717c9ba5bb6dc047b34dd04064101c1d.pdf"
+published: "2024"
+categories: []
+keywords: ["Fine-Tuning", "Interpretability", "Mechanisms"]
+venue_source: "openreview"
+hunter_fetched: "2026-04-15T05:17:59+09:00"
+---
+
+# Mechanistically analyzing the effects of fine-tuning on procedurally defined tasks
+
+## Abstract
+Fine-tuning large pre-trained models has become the de facto strategy for developing both task-specific and general-purpose machine learning systems, including developing models that are safe to deploy. Despite its clear importance, there has been minimal work that explains how fine-tuning alters the underlying capabilities learned by a model during pretraining: does fine-tuning yield entirely novel capabilities or does it just modulate existing ones? We address this question empirically in synthetic, controlled settings where we can use mechanistic interpretability tools (e.g., network pruning and probing) to understand how the model's underlying capabilities are changing. We perform an extensive analysis of the effects of fine-tuning in these settings, and show that: (i) fine-tuning rarely alters the underlying model capabilities; (ii) a minimal transformation, which we call a `wrapper', is typically learned on top of the underlying model capabilities, creating the illusion that they have been modified; and (iii) further fine-tuning on a task where such ``wrapped capabilities'' are relevant leads to sample-efficient revival of the capability, i.e., the model begins reusing these capabilities after only a few gradient steps. This indicates that practitioners can unintentionally remove a model's safety wrapper merely by fine-tuning it on a, e.g., superficially unrelated, downstream task. We additionally perform analysis on language models trained on the TinyStories dataset to support our claims in a more realistic setup.
+
+## Metadata
+- venue: ICLR
+- year: 2024
+- authors: Samyak Jain, Robert Kirk, Ekdeep Singh Lubana, Robert P. Dick, Hidenori Tanaka, Tim Rocktäschel, Edward Grefenstette, David Krueger
+- arxiv_id: 
+- openreview_id: A0HKeKl4Nl
+- anthology_id: 
+- pdf_url: https://openreview.net/pdf/b46dce52717c9ba5bb6dc047b34dd04064101c1d.pdf
+- published: 2024
+- keywords: Fine-Tuning, Interpretability, Mechanisms

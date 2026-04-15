@@ -1,0 +1,32 @@
+---
+title: "Immiscible Diffusion: Accelerating Diffusion Training with Noise Assignment"
+authors: ["Yiheng Li", "Heyang Jiang", "Akio Kodaira", "Masayoshi Tomizuka", "Kurt Keutzer", "Chenfeng Xu"]
+venue: "NeurIPS"
+year: 2024
+venue_class: "whitelist"
+arxiv_id: ""
+openreview_id: "kK23oMGe9g"
+anthology_id: ""
+pdf_url: "https://openreview.net/pdf/8093e21d1d0b2604a4b881a70ce04e78aa527088.pdf"
+published: "2024"
+categories: []
+keywords: ["Diffusion Model", "Training Efficiency"]
+venue_source: "openreview"
+hunter_fetched: "2026-04-15T05:18:44+09:00"
+---
+
+# Immiscible Diffusion: Accelerating Diffusion Training with Noise Assignment
+
+## Abstract
+In this paper, we point out that suboptimal noise-data mapping leads to slow training of diffusion models. During diffusion training, current methods diffuse each image across the entire noise space, resulting in a mixture of all images at every point in the noise layer. We emphasize that this random mixture of noise-data mapping complicates the optimization of the denoising function in diffusion models. Drawing inspiration from the immiscibility phenomenon in physics, we propose *Immiscible Diffusion*, a simple and effective method to improve the random mixture of noise-data mapping. In physics, miscibility can vary according to various intermolecular forces. Thus, immiscibility means that the mixing of molecular sources is distinguishable. Inspired by this concept, we propose an assignment-then-diffusion training strategy to achieve *Immiscible Diffusion*. As one example, prior to diffusing the image data into noise, we assign diffusion target noise for the image data by minimizing the total image-noise pair distance in a mini-batch. The assignment functions analogously to external forces to expel the diffuse-able areas of images, thus mitigating the inherent difficulties in diffusion training. Our approach is remarkably simple, requiring only *one line of code* to restrict the diffuse-able area for each image while preserving the Gaussian distribution of noise. In this way, each image is preferably projected to nearby noise. To address the high complexity of the assignment algorithm, we employ a quantized assignment strategy, which significantly reduces the computational overhead to a negligible level (e.g. 22.8ms for a large batch size of 1024 on an A6000). Experiments demonstrate that our method can achieve up to 3x faster training for unconditional Consistency Models on the CIFAR dataset, as well as for DDIM and Stable Diffusion on CelebA and ImageNet dataset, and in class-conditional training and fine-tuning. In addition, we conducted a thorough analysis that sheds light on how it improves diffusion training speed while improving fidelity. The code is available at https://yhli123.github.io/immiscible-diffusion
+
+## Metadata
+- venue: NeurIPS
+- year: 2024
+- authors: Yiheng Li, Heyang Jiang, Akio Kodaira, Masayoshi Tomizuka, Kurt Keutzer, Chenfeng Xu
+- arxiv_id: 
+- openreview_id: kK23oMGe9g
+- anthology_id: 
+- pdf_url: https://openreview.net/pdf/8093e21d1d0b2604a4b881a70ce04e78aa527088.pdf
+- published: 2024
+- keywords: Diffusion Model, Training Efficiency

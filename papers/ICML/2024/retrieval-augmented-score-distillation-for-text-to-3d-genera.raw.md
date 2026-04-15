@@ -1,0 +1,31 @@
+---
+title: "Retrieval-Augmented Score Distillation for Text-to-3D Generation"
+authors: ["Junyoung Seo", "Susung Hong", "Wooseok Jang", "Inès Hyeonsu Kim", "Min-Seop Kwak", "Doyup Lee", "Seungryong Kim"]
+venue: "ICML"
+year: 2024
+venue_class: "whitelist"
+arxiv_id: ""
+openreview_id: "1xKgDANODx"
+anthology_id: ""
+pdf_url: "https://openreview.net/pdf/512c339c4421036288fc2e8d69be445dbb0842e3.pdf"
+published: "2024"
+categories: []
+keywords: []
+venue_source: "openreview"
+hunter_fetched: "2026-04-15T05:19:43+09:00"
+---
+
+# Retrieval-Augmented Score Distillation for Text-to-3D Generation
+
+## Abstract
+Text-to-3D generation has achieved significant success by incorporating powerful 2D diffusion models, but insufficient 3D prior knowledge also leads to the inconsistency of 3D geometry. Recently, since large-scale multi-view datasets have been released, fine-tuning the diffusion model on the multi-view datasets becomes a mainstream to solve the 3D inconsistency problem. However, it has confronted with fundamental difficulties regarding the limited quality and diversity of 3D data, compared with 2D data. To sidestep these trade-offs, we explore a retrieval-augmented approach tailored for score distillation, dubbed ReDream. We postulate that both expressiveness of 2D diffusion models and geometric consistency of 3D assets can be fully leveraged by employing the semantically relevant assets directly within the optimization process. To this end, we introduce novel framework for retrieval-based quality enhancement in text-to-3D generation. We leverage the retrieved asset to incorporate its geometric prior in the variational objective and adapt the diffusion model's 2D prior toward view consistency, achieving drastic improvements in both geometry and fidelity of generated scenes. We conduct extensive experiments to demonstrate that ReDream exhibits superior quality with increased geometric consistency. Project page is available at https://ku-cvlab.github.io/ReDream/.
+
+## Metadata
+- venue: ICML
+- year: 2024
+- authors: Junyoung Seo, Susung Hong, Wooseok Jang, Inès Hyeonsu Kim, Min-Seop Kwak, Doyup Lee, Seungryong Kim
+- arxiv_id: 
+- openreview_id: 1xKgDANODx
+- anthology_id: 
+- pdf_url: https://openreview.net/pdf/512c339c4421036288fc2e8d69be445dbb0842e3.pdf
+- published: 2024

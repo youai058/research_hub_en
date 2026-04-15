@@ -1,0 +1,31 @@
+---
+title: "Simple linear attention language models balance the recall-throughput tradeoff"
+authors: ["Simran Arora", "Sabri Eyuboglu", "Michael Zhang", "Aman Timalsina", "Silas Alberti", "James Zou", "Atri Rudra", "Christopher Re"]
+venue: "ICML"
+year: 2024
+venue_class: "whitelist"
+arxiv_id: ""
+openreview_id: "e93ffDcpH3"
+anthology_id: ""
+pdf_url: "https://openreview.net/pdf/8007385a20b06d26728f6b395b6dfbda50253ca6.pdf"
+published: "2024"
+categories: []
+keywords: []
+venue_source: "openreview"
+hunter_fetched: "2026-04-15T05:19:18+09:00"
+---
+
+# Simple linear attention language models balance the recall-throughput tradeoff
+
+## Abstract
+Recent work has shown that attention-based language models excel at "recall", the ability to ground generations in tokens previously seen in context. However, the efficiency of attention-based models is bottle-necked during inference by the KV-cache's aggressive memory consumption. In this work, we explore whether we can improve language model efficiency (e.g. by reducing memory consumption) without compromising on recall. By applying experiments and theory to a broad set of architectures, we identify a key tradeoff between a model's recurrent state size and recall ability. We show that efficient alternatives to attention (e.g. H3, Mamba, RWKV) maintain a fixed-size recurrent state, but struggle at recall. We propose BASED a simple architecture combining linear and sliding window attention. By varying BASED window size and linear attention feature dimension, we can dial the state size and traverse the Pareto frontier of the recall-memory tradeoff curve, recovering the full quality of attention on one end and the small state size of attention-alternatives on the other. We train language models up to $1.3$b parameters and show that BASED matches the strongest sub-quadratic models (e.g. Mamba) in perplexity and outperforms them on real-world recall-intensive tasks by 10.36 accuracy points. We further develop IO-aware algorithms that enable BASED to provide 24× higher throughput on language generation than FlashAttention-2, when generating 1024 tokens using 1.3b parameter models. Overall, BASED expands the Pareto frontier of the throughput-recall tradeoff space beyond prior architectures.
+
+## Metadata
+- venue: ICML
+- year: 2024
+- authors: Simran Arora, Sabri Eyuboglu, Michael Zhang, Aman Timalsina, Silas Alberti, James Zou, Atri Rudra, Christopher Re
+- arxiv_id: 
+- openreview_id: e93ffDcpH3
+- anthology_id: 
+- pdf_url: https://openreview.net/pdf/8007385a20b06d26728f6b395b6dfbda50253ca6.pdf
+- published: 2024

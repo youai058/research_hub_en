@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "source_file": "papers/_fixture/kg-smoke/paper.md",
+  "source_sha": "5d18b4f64bea694b89879e88f5bfa611d09d5a6822f6bf7b37c700ce5bc0e2a4",
+  "author_agent": "paper-summarizer",
+  "extracted_at": "2026-04-14T18:00:00+09:00",
+  "nodes": [
+    {
+      "id": "paper:fixture/2026/smoke",
+      "type": "Paper",
+      "name": "Smoke Paper",
+      "meta": {
+        "venue": "Fixture",
+        "year": 2026
+      }
+    },
+    {
+      "id": "claim:fixture/2026/smoke#c1",
+      "type": "Claim",
+      "name": "smoke claim",
+      "meta": {}
+    },
+    {
+      "id": "method:gcg",
+      "type": "Method",
+      "name": "GCG",
+      "meta": {
+        "aliases": [
+          "Greedy Coordinate Gradient"
+        ]
+      },
+      "alias_check": {
+        "queried_existing": false,
+        "matched": null,
+        "rationale": "bootstrap, no prior state"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "src": "paper:fixture/2026/smoke",
+      "type": "MAKES",
+      "dst": "claim:fixture/2026/smoke#c1",
+      "meta": {
+        "section": "Claims"
+      }
+    },
+    {
+      "src": "paper:fixture/2026/smoke",
+      "type": "PROPOSES",
+      "dst": "method:gcg",
+      "meta": {}
+    }
+  ]
+}

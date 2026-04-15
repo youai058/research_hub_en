@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "source_file": "papers/_fixture/kg-reject/bad.md",
+  "source_sha": "5d18b4f64bea694b89879e88f5bfa611d09d5a6822f6bf7b37c700ce5bc0e2a4",
+  "author_agent": "paper-summarizer",
+  "extracted_at": "2026-04-14T18:00:00+09:00",
+  "nodes": [
+    {
+      "id": "Paper:iclr/2026/XX",
+      "type": "Paper",
+      "name": "X",
+      "meta": {}
+    }
+  ],
+  "edges": []
+}

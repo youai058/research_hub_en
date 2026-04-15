@@ -1,0 +1,31 @@
+---
+title: "DiffGRM: Diffusion-based Generative Recommendation Model"
+authors: ["Zhao Liu", "Yichen Zhu", "Yiqing Yang", "Guoping Tang", "Rui Huang", "Qiang Luo", "Xiao Lv", "Ruiming Tang", "Kun Gai", "Guorui Zhou"]
+venue: "arXiv"
+year: 2025
+venue_class: "etc"
+arxiv_id: "2510.21805"
+openreview_id: ""
+anthology_id: ""
+pdf_url: "https://arxiv.org/pdf/2510.21805v1"
+published: "2025-10-21"
+categories: ["cs.IR", "cs.AI", "cs.LG"]
+keywords: []
+venue_source: "arxiv-only"
+hunter_fetched: "2026-04-15T05:17:40+09:00"
+---
+
+# DiffGRM: Diffusion-based Generative Recommendation Model
+
+## Abstract
+Generative recommendation (GR) is an emerging paradigm that represents each item via a tokenizer as an n-digit semantic ID (SID) and predicts the next item by autoregressively generating its SID conditioned on the user's history. However, two structural properties of SIDs make ARMs ill-suited. First, intra-item consistency: the n digits jointly specify one item, yet the left-to-right causality trains each digit only under its prefix and blocks bidirectional cross-digit evidence, collapsing supervision to a single causal path. Second, inter-digit heterogeneity: digits differ in semantic granularity and predictability, while the uniform next-token objective assigns equal weight to all digits, overtraining easy digits and undertraining hard digits. To address these two issues, we propose DiffGRM, a diffusion-based GR model that replaces the autoregressive decoder with a masked discrete diffusion model (MDM), thereby enabling bidirectional context and any-order parallel generation of SID digits for recommendation. Specifically, we tailor DiffGRM in three aspects: (1) tokenization with Parallel Semantic Encoding (PSE) to decouple digits and balance per-digit information; (2) training with On-policy Coherent Noising (OCN) that prioritizes uncertain digits via coherent masking to concentrate supervision on high-value signals; and (3) inference with Confidence-guided Parallel Denoising (CPD) that fills higher-confidence digits first and generates diverse Top-K candidates. Experiments show consistent gains over strong generative and discriminative recommendation baselines on multiple datasets, improving NDCG@10 by 6.9%-15.5%. Code is available at https://github.com/liuzhao09/DiffGRM.
+
+## Metadata
+- venue: arXiv
+- year: 2025
+- authors: Zhao Liu, Yichen Zhu, Yiqing Yang, Guoping Tang, Rui Huang, Qiang Luo, Xiao Lv, Ruiming Tang, Kun Gai, Guorui Zhou
+- arxiv_id: 2510.21805
+- openreview_id: 
+- anthology_id: 
+- pdf_url: https://arxiv.org/pdf/2510.21805v1
+- published: 2025-10-21

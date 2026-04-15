@@ -1,0 +1,31 @@
+---
+title: "A Unification of Discrete, Gaussian, and Simplicial Diffusion"
+authors: ["Nuria Alina Chandra", "Yucen Lily Li", "Alan N. Amin", "Alex Ali", "Joshua Rollins", "Sebastian W. Ober", "Aniruddh Raghu", "Andrew Gordon Wilson"]
+venue: "arXiv"
+year: 2025
+venue_class: "etc"
+arxiv_id: "2512.15923"
+openreview_id: ""
+anthology_id: ""
+pdf_url: "https://arxiv.org/pdf/2512.15923v1"
+published: "2025-12-17"
+categories: ["cs.LG"]
+keywords: []
+venue_source: "arxiv-only"
+hunter_fetched: "2026-04-15T05:17:33+09:00"
+---
+
+# A Unification of Discrete, Gaussian, and Simplicial Diffusion
+
+## Abstract
+To model discrete sequences such as DNA, proteins, and language using diffusion, practitioners must choose between three major methods: diffusion in discrete space, Gaussian diffusion in Euclidean space, or diffusion on the simplex. Despite their shared goal, these models have disparate algorithms, theoretical structures, and tradeoffs: discrete diffusion has the most natural domain, Gaussian diffusion has more mature algorithms, and diffusion on the simplex in principle combines the strengths of the other two but in practice suffers from a numerically unstable stochastic processes. Ideally we could see each of these models as instances of the same underlying framework, and enable practitioners to switch between models for downstream applications. However previous theories have only considered connections in special cases. Here we build a theory unifying all three methods of discrete diffusion as different parameterizations of the same underlying process: the Wright-Fisher population genetics model. In particular, we find simplicial and Gaussian diffusion as two large-population limits. Our theory formally connects the likelihoods and hyperparameters of these models and leverages decades of mathematical genetics literature to unlock stable simplicial diffusion. Finally, we relieve the practitioner of balancing model trade-offs by demonstrating it is possible to train a single model that can perform diffusion in any of these three domains at test time. Our experiments show that Wright-Fisher simplicial diffusion is more stable and outperforms previous simplicial diffusion models on conditional DNA generation. We also show that we can train models on multiple domains at once that are competitive with models trained on any individual domain.
+
+## Metadata
+- venue: arXiv
+- year: 2025
+- authors: Nuria Alina Chandra, Yucen Lily Li, Alan N. Amin, Alex Ali, Joshua Rollins, Sebastian W. Ober, Aniruddh Raghu, Andrew Gordon Wilson
+- arxiv_id: 2512.15923
+- openreview_id: 
+- anthology_id: 
+- pdf_url: https://arxiv.org/pdf/2512.15923v1
+- published: 2025-12-17

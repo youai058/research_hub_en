@@ -1,0 +1,32 @@
+---
+title: "Local Pan-privacy for Federated Analytics"
+authors: ["Vitaly Feldman", "Audra McMillan", "Guy N. Rothblum", "Kunal Talwar"]
+venue: "ICML"
+year: 2025
+venue_class: "whitelist"
+arxiv_id: ""
+openreview_id: "M18dhHTFf8"
+anthology_id: ""
+pdf_url: "https://openreview.net/pdf/1609e004a6401102c419589ae83741eb5856f37e.pdf"
+published: "2025"
+categories: []
+keywords: ["Differential Privacy", "Pan privacy"]
+venue_source: "openreview"
+hunter_fetched: "2026-04-15T05:16:28+09:00"
+---
+
+# Local Pan-privacy for Federated Analytics
+
+## Abstract
+Pan-privacy was proposed by Dwork et al. (2010) as an approach to designing a private analytics system that retains its privacy properties in the face of intrusions that expose the system's internal state. Motivated by Federated telemetry applications, we study {\em local pan-privacy}, where privacy should be retained under repeated unannounced intrusions {\em on the local state}. We consider the problem of monitoring the count of an event in a federated system, where event occurrences on a local device should be hidden even from an intruder on that device. We show that under reasonable constraints, the goal of providing information-theoretic differential privacy under intrusion is incompatible with collecting telemetry information. We then show that this problem can be solved in a scalable way using standard cryptographic primitives.
+
+## Metadata
+- venue: ICML
+- year: 2025
+- authors: Vitaly Feldman, Audra McMillan, Guy N. Rothblum, Kunal Talwar
+- arxiv_id: 
+- openreview_id: M18dhHTFf8
+- anthology_id: 
+- pdf_url: https://openreview.net/pdf/1609e004a6401102c419589ae83741eb5856f37e.pdf
+- published: 2025
+- keywords: Differential Privacy, Pan privacy

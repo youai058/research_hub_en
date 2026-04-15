@@ -1,0 +1,28 @@
+/.local/
+papers/**/.gemini_digest/
+papers/**/.pdf_cache/
+papers/**/.figure_cache/
+
+# Binary RAG / KG stores (rebuilt via /research-index, /research-kg build)
+papers/rag/chroma/
+papers/kg/*.sqlite
+papers/kg/*.sqlite-*
+papers/kg/rejected.jsonl
+
+# Runtime loop state and backups
+research/loop_state.json
+research/loop_state.*.bak.json
+
+# Regenerable experiment outputs
+results_*/
+experiments/*/runs/
+experiments/*/logs/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Secrets
+.env
+.env.*

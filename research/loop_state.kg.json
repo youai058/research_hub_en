@@ -1,0 +1,374 @@
+{
+  "version": 1,
+  "source_file": "/home1/irteam/sw/research_hub/research/loop_state.json",
+  "source_sha": "11101a195d23be86fb4ba34681318de2609335819ccbd60650268c0b675707cd",
+  "extracted_at": "2026-04-15T20:54:03+09:00",
+  "author_agent": "loop_state.py",
+  "nodes": [
+    {
+      "id": "loop:2026-04-15-stage-split-smoke-papers-v1-a-stage-enter",
+      "type": "LoopStage",
+      "name": "papers v1 A/null (stage-enter)",
+      "meta": {
+        "stage": "papers",
+        "stage_version": 1,
+        "inner_phase": "A",
+        "sub_phase": "null",
+        "slug": "2026-04-15-stage-split-smoke",
+        "event": "stage-enter",
+        "at": "2026-04-15T20:51:14+09:00"
+      }
+    },
+    {
+      "id": "loop:2026-04-15-stage-split-smoke-papers-v1-b-inner-advance",
+      "type": "LoopStage",
+      "name": "papers v1 B/null (inner-advance)",
+      "meta": {
+        "stage": "papers",
+        "stage_version": 1,
+        "inner_phase": "B",
+        "sub_phase": "null",
+        "slug": "2026-04-15-stage-split-smoke",
+        "event": "inner-advance",
+        "at": "2026-04-15T20:51:14+09:00"
+      }
+    },
+    {
+      "id": "loop:2026-04-15-stage-split-smoke-papers-v1-c-inner-advance",
+      "type": "LoopStage",
+      "name": "papers v1 C/A-1 (inner-advance)",
+      "meta": {
+        "stage": "papers",
+        "stage_version": 1,
+        "inner_phase": "C",
+        "sub_phase": "A-1",
+        "slug": "2026-04-15-stage-split-smoke",
+        "event": "inner-advance",
+        "at": "2026-04-15T20:51:14+09:00"
+      }
+    },
+    {
+      "id": "loop:2026-04-15-stage-split-smoke-papers-v1-c-sub-advance",
+      "type": "LoopStage",
+      "name": "papers v1 C/A-2 (sub-advance)",
+      "meta": {
+        "stage": "papers",
+        "stage_version": 1,
+        "inner_phase": "C",
+        "sub_phase": "A-2",
+        "slug": "2026-04-15-stage-split-smoke",
+        "event": "sub-advance",
+        "at": "2026-04-15T20:51:14+09:00"
+      }
+    },
+    {
+      "id": "loop:2026-04-15-stage-split-smoke-papers-v1-completed-stage-completed",
+      "type": "LoopStage",
+      "name": "papers v1 completed/A-4 (stage-completed)",
+      "meta": {
+        "stage": "papers",
+        "stage_version": 1,
+        "inner_phase": "completed",
+        "sub_phase": "A-4",
+        "slug": "2026-04-15-stage-split-smoke",
+        "event": "stage-completed",
+        "at": "2026-04-15T20:51:14+09:00"
+      }
+    },
+    {
+      "id": "loop:2026-04-15-stage-split-smoke-idle-v0-null-idle",
+      "type": "LoopStage",
+      "name": "idle v0 null/null (idle)",
+      "meta": {
+        "stage": "idle",
+        "stage_version": 0,
+        "inner_phase": "null",
+        "sub_phase": "null",
+        "slug": "2026-04-15-stage-split-smoke",
+        "event": "idle",
+        "at": "2026-04-15T20:51:14+09:00"
+      }
+    },
+    {
+      "id": "loop:2026-04-15-stage-split-smoke-qa-v1-a-stage-enter",
+      "type": "LoopStage",
+      "name": "qa v1 A/null (stage-enter)",
+      "meta": {
+        "stage": "qa",
+        "stage_version": 1,
+        "inner_phase": "A",
+        "sub_phase": "null",
+        "slug": "2026-04-15-stage-split-smoke",
+        "event": "stage-enter",
+        "at": "2026-04-15T20:53:16+09:00"
+      }
+    },
+    {
+      "id": "loop:2026-04-15-stage-split-smoke-qa-v1-b-inner-advance",
+      "type": "LoopStage",
+      "name": "qa v1 B/null (inner-advance)",
+      "meta": {
+        "stage": "qa",
+        "stage_version": 1,
+        "inner_phase": "B",
+        "sub_phase": "null",
+        "slug": "2026-04-15-stage-split-smoke",
+        "event": "inner-advance",
+        "at": "2026-04-15T20:53:22+09:00"
+      }
+    },
+    {
+      "id": "loop:2026-04-15-stage-split-smoke-qa-v1-c-inner-advance",
+      "type": "LoopStage",
+      "name": "qa v1 C/B-1 (inner-advance)",
+      "meta": {
+        "stage": "qa",
+        "stage_version": 1,
+        "inner_phase": "C",
+        "sub_phase": "B-1",
+        "slug": "2026-04-15-stage-split-smoke",
+        "event": "inner-advance",
+        "at": "2026-04-15T20:53:22+09:00"
+      }
+    },
+    {
+      "id": "loop:2026-04-15-stage-split-smoke-qa-v1-c-sub-advance",
+      "type": "LoopStage",
+      "name": "qa v1 C/B-2 (sub-advance)",
+      "meta": {
+        "stage": "qa",
+        "stage_version": 1,
+        "inner_phase": "C",
+        "sub_phase": "B-2",
+        "slug": "2026-04-15-stage-split-smoke",
+        "event": "sub-advance",
+        "at": "2026-04-15T20:53:32+09:00"
+      }
+    },
+    {
+      "id": "loop:2026-04-15-stage-split-smoke-qa-v1-completed-stage-completed",
+      "type": "LoopStage",
+      "name": "qa v1 completed/B-2 (stage-completed)",
+      "meta": {
+        "stage": "qa",
+        "stage_version": 1,
+        "inner_phase": "completed",
+        "sub_phase": "B-2",
+        "slug": "2026-04-15-stage-split-smoke",
+        "event": "stage-completed",
+        "at": "2026-04-15T20:53:32+09:00"
+      }
+    },
+    {
+      "id": "loop:2026-04-15-stage-split-smoke-experiments-v1-a-stage-enter",
+      "type": "LoopStage",
+      "name": "experiments v1 A/null (stage-enter)",
+      "meta": {
+        "stage": "experiments",
+        "stage_version": 1,
+        "inner_phase": "A",
+        "sub_phase": "null",
+        "slug": "2026-04-15-stage-split-smoke",
+        "event": "stage-enter",
+        "at": "2026-04-15T20:53:39+09:00"
+      }
+    },
+    {
+      "id": "loop:2026-04-15-stage-split-smoke-experiments-v1-b-inner-advance",
+      "type": "LoopStage",
+      "name": "experiments v1 B/null (inner-advance)",
+      "meta": {
+        "stage": "experiments",
+        "stage_version": 1,
+        "inner_phase": "B",
+        "sub_phase": "null",
+        "slug": "2026-04-15-stage-split-smoke",
+        "event": "inner-advance",
+        "at": "2026-04-15T20:53:40+09:00"
+      }
+    },
+    {
+      "id": "loop:2026-04-15-stage-split-smoke-experiments-v1-c-inner-advance",
+      "type": "LoopStage",
+      "name": "experiments v1 C/E-1 (inner-advance)",
+      "meta": {
+        "stage": "experiments",
+        "stage_version": 1,
+        "inner_phase": "C",
+        "sub_phase": "E-1",
+        "slug": "2026-04-15-stage-split-smoke",
+        "event": "inner-advance",
+        "at": "2026-04-15T20:53:40+09:00"
+      }
+    },
+    {
+      "id": "loop:2026-04-15-stage-split-smoke-experiments-v1-c-sub-advance",
+      "type": "LoopStage",
+      "name": "experiments v1 C/E-2 (sub-advance)",
+      "meta": {
+        "stage": "experiments",
+        "stage_version": 1,
+        "inner_phase": "C",
+        "sub_phase": "E-2",
+        "slug": "2026-04-15-stage-split-smoke",
+        "event": "sub-advance",
+        "at": "2026-04-15T20:53:40+09:00"
+      }
+    },
+    {
+      "id": "loop:2026-04-15-stage-split-smoke-experiments-v1-completed-stage-completed",
+      "type": "LoopStage",
+      "name": "experiments v1 completed/E-3 (stage-completed)",
+      "meta": {
+        "stage": "experiments",
+        "stage_version": 1,
+        "inner_phase": "completed",
+        "sub_phase": "E-3",
+        "slug": "2026-04-15-stage-split-smoke",
+        "event": "stage-completed",
+        "at": "2026-04-15T20:53:40+09:00"
+      }
+    },
+    {
+      "id": "loop:2026-04-15-stage-split-smoke-analyze-v1-a-stage-enter",
+      "type": "LoopStage",
+      "name": "analyze v1 A/null (stage-enter)",
+      "meta": {
+        "stage": "analyze",
+        "stage_version": 1,
+        "inner_phase": "A",
+        "sub_phase": "null",
+        "slug": "2026-04-15-stage-split-smoke",
+        "event": "stage-enter",
+        "at": "2026-04-15T20:53:47+09:00"
+      }
+    },
+    {
+      "id": "loop:2026-04-15-stage-split-smoke-analyze-v1-b-inner-advance",
+      "type": "LoopStage",
+      "name": "analyze v1 B/null (inner-advance)",
+      "meta": {
+        "stage": "analyze",
+        "stage_version": 1,
+        "inner_phase": "B",
+        "sub_phase": "null",
+        "slug": "2026-04-15-stage-split-smoke",
+        "event": "inner-advance",
+        "at": "2026-04-15T20:53:47+09:00"
+      }
+    },
+    {
+      "id": "loop:2026-04-15-stage-split-smoke-analyze-v1-c-inner-advance",
+      "type": "LoopStage",
+      "name": "analyze v1 C/F-1 (inner-advance)",
+      "meta": {
+        "stage": "analyze",
+        "stage_version": 1,
+        "inner_phase": "C",
+        "sub_phase": "F-1",
+        "slug": "2026-04-15-stage-split-smoke",
+        "event": "inner-advance",
+        "at": "2026-04-15T20:53:47+09:00"
+      }
+    },
+    {
+      "id": "loop:2026-04-15-stage-split-smoke-analyze-v1-c-sub-advance",
+      "type": "LoopStage",
+      "name": "analyze v1 C/F-2 (sub-advance)",
+      "meta": {
+        "stage": "analyze",
+        "stage_version": 1,
+        "inner_phase": "C",
+        "sub_phase": "F-2",
+        "slug": "2026-04-15-stage-split-smoke",
+        "event": "sub-advance",
+        "at": "2026-04-15T20:53:47+09:00"
+      }
+    },
+    {
+      "id": "loop:2026-04-15-stage-split-smoke-analyze-v1-completed-stage-completed",
+      "type": "LoopStage",
+      "name": "analyze v1 completed/F-2 (stage-completed)",
+      "meta": {
+        "stage": "analyze",
+        "stage_version": 1,
+        "inner_phase": "completed",
+        "sub_phase": "F-2",
+        "slug": "2026-04-15-stage-split-smoke",
+        "event": "stage-completed",
+        "at": "2026-04-15T20:53:47+09:00"
+      }
+    },
+    {
+      "id": "loop:2026-04-15-stage-split-smoke-papers-v2-a-stage-enter",
+      "type": "LoopStage",
+      "name": "papers v2 A/null (stage-enter)",
+      "meta": {
+        "stage": "papers",
+        "stage_version": 2,
+        "inner_phase": "A",
+        "sub_phase": "null",
+        "slug": "2026-04-15-stage-split-smoke",
+        "event": "stage-enter",
+        "at": "2026-04-15T20:53:53+09:00"
+      }
+    },
+    {
+      "id": "loop:2026-04-15-stage-split-smoke-papers-v2-b-inner-advance",
+      "type": "LoopStage",
+      "name": "papers v2 B/null (inner-advance)",
+      "meta": {
+        "stage": "papers",
+        "stage_version": 2,
+        "inner_phase": "B",
+        "sub_phase": "null",
+        "slug": "2026-04-15-stage-split-smoke",
+        "event": "inner-advance",
+        "at": "2026-04-15T20:54:02+09:00"
+      }
+    },
+    {
+      "id": "loop:2026-04-15-stage-split-smoke-papers-v2-c-inner-advance",
+      "type": "LoopStage",
+      "name": "papers v2 C/A-1 (inner-advance)",
+      "meta": {
+        "stage": "papers",
+        "stage_version": 2,
+        "inner_phase": "C",
+        "sub_phase": "A-1",
+        "slug": "2026-04-15-stage-split-smoke",
+        "event": "inner-advance",
+        "at": "2026-04-15T20:54:02+09:00"
+      }
+    },
+    {
+      "id": "loop:2026-04-15-stage-split-smoke-papers-v2-c-sub-advance",
+      "type": "LoopStage",
+      "name": "papers v2 C/A-2 (sub-advance)",
+      "meta": {
+        "stage": "papers",
+        "stage_version": 2,
+        "inner_phase": "C",
+        "sub_phase": "A-2",
+        "slug": "2026-04-15-stage-split-smoke",
+        "event": "sub-advance",
+        "at": "2026-04-15T20:54:02+09:00"
+      }
+    },
+    {
+      "id": "loop:2026-04-15-stage-split-smoke-papers-v2-completed-stage-completed",
+      "type": "LoopStage",
+      "name": "papers v2 completed/A-4 (stage-completed)",
+      "meta": {
+        "stage": "papers",
+        "stage_version": 2,
+        "inner_phase": "completed",
+        "sub_phase": "A-4",
+        "slug": "2026-04-15-stage-split-smoke",
+        "event": "stage-completed",
+        "at": "2026-04-15T20:54:03+09:00"
+      }
+    }
+  ],
+  "edges": []
+}

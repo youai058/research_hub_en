@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "source_file": "/home1/irteam/sw/research_hub/docs/lessons-paper.md",
+  "source_sha": "0e0fc3b0408f6e7dd59ec8a76cdc2d0d854716b18af3710aac1a5df8fedd867e",
+  "extracted_at": "2026-04-15T12:12:44+09:00",
+  "author_agent": "lesson.py",
+  "nodes": [
+    {
+      "id": "lesson:paper--2026-04-14-kg-bootstrap-with-sibling-kg-json",
+      "type": "Lesson",
+      "name": "KG bootstrap with sibling .kg.json",
+      "meta": {
+        "domain": "paper",
+        "date": "2026-04-14",
+        "rule": "모든 prose-writing agent는 결과 .md 옆에 같은 이름의 .kg.json을 함께 작성한다",
+        "why": "KG는 LLM 추론 없이 에이전트가 적은 그대로만 반영하기에, byproduct 파일이 단일 진실이다",
+        "when": "paper-summarizer / answer-formulator / critic / experiment-planner / code-implementer / results-analyst 모든 산출물 생성 후"
+      }
+    },
+    {
+      "id": "lesson:paper--2026-04-15-paper-hunt-title-abstract",
+      "type": "Lesson",
+      "name": "paper-hunt 키워드는 title ∪ abstract 양쪽 매칭",
+      "meta": {
+        "domain": "paper",
+        "date": "2026-04-15",
+        "rule": "paper-hunter는 모든 source(arxiv/anthology/openreview)에서 키워드 매칭을 title과 abstract 양쪽에 걸쳐 수행한다. arxiv 쿼리는 `(ti:\"kw\" OR abs:\"kw\")`, anthology는 listing 단계에서 title pre-filter 없이 detail fetch 후 title+abstract 문자열에 매치, openreview는 venueid 전체 dump이므로 자동으로 양쪽 포함.",
+        "why": "이전 arxiv `abs:\"kw\"` 단독·anthology title-only pre-filter 방식은 키워드가 한쪽에만 등장하는 논문을 구조적으로 누락했다. recall 담당인 paper-hunter가 이런 miss를 내면 하류 triage에 도달조차 못하므로 복구 불가.",
+        "when": "paper-hunt 코드 수정 시 이 규칙을 유지할 것. anthology에서 detail fetch가 비싸지만 `--max-per-venue-year` cap이 도달 즉시 짧아지는 안전장치가 있으므로 title pre-filter를 다시 넣지 않는다."
+      }
+    }
+  ],
+  "edges": []
+}

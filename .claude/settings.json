@@ -1,0 +1,97 @@
+{
+  "permissions": {
+    "allow": [],
+    "deny": [
+      "Bash(rm -rf *)",
+      "Bash(rm -rf /*)",
+      "Bash(git push --force*)",
+      "Bash(git reset --hard*)",
+      "Bash(rm -rf *papers/rag*)",
+      "Bash(rm -rf *papers/kg*)",
+      "Bash(rm -rf *research/*)",
+      "Bash(rm -rf *experiments/*)"
+    ],
+    "defaultMode": "bypassPermissions"
+  },
+  "skipDangerousModePermissionPrompt": true,
+  "env": {
+    "HF_HOME": "/home/irteam/.cache/huggingface",
+    "TOKENIZERS_PARALLELISM": "false",
+    "CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING": "1"
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "python3 /home/irteam/sw/research_hub/.claude/scripts/loop_state.py status --short"
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/irteam/sw/research_hub/.claude/hooks/session_start.sh"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/irteam/sw/research_hub/.claude/hooks/inject_lessons.sh"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/irteam/sw/research_hub/.claude/hooks/phase_advance_check.sh"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/irteam/sw/research_hub/.claude/hooks/mark_indices_stale.sh"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/irteam/sw/research_hub/.claude/hooks/protect_chroma.sh"
+          },
+          {
+            "type": "command",
+            "command": "/home/irteam/sw/research_hub/.claude/hooks/protect_kg.sh"
+          },
+          {
+            "type": "command",
+            "command": "/home/irteam/sw/research_hub/.claude/hooks/guard_empty_rag.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit|MultiEdit|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/irteam/sw/research_hub/.claude/hooks/protect_external_paths.sh"
+          }
+        ]
+      }
+    ]
+  }
+}

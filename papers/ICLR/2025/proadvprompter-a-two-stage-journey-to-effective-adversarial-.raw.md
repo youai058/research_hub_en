@@ -1,0 +1,41 @@
+---
+title: "ProAdvPrompter: A Two-Stage Journey to Effective Adversarial Prompting for LLMs"
+authors: ["Hao Di", "Tong He", "Haishan Ye", "Yinghui Huang", "Xiangyu Chang", "Guang Dai", "Ivor Tsang"]
+venue: "ICLR"
+year: 2025
+venue_class: "whitelist"
+arxiv_id: ""
+openreview_id: "tpHqsyZ3YX"
+anthology_id: ""
+pdf_url: "https://openreview.net/pdf/7b86aec02e741d1f4a4b1f024325c6dbe236ee8c.pdf"
+published: "2025"
+categories: []
+keywords: ["jailbreaking attacks; large language model"]
+venue_source: "openreview"
+hunter_fetched: "2026-04-15T05:14:46+09:00"
+---
+
+# ProAdvPrompter: A Two-Stage Journey to Effective Adversarial Prompting for LLMs
+
+## Abstract
+As large language models (LLMs) are increasingly being integrated into various real-world applications, the identification of their vulnerabilities to jailbreaking attacks becomes an essential component of ensuring the safety and reliability of LLMs. 
+Previous studies have developed LLM assistants, known as the adversarial prompter, to automatically generate suffixes that manipulate target LLMs into generating harmful and undesirable outputs.
+However, these approaches often suffer from low performance or generate semantically meaningless prompts, which can be easily identified by perplexity-based defenses.
+In this paper, we introduce a novel two-stage method, $\texttt{ProAdvPrompter}$, that significantly improves the performance of adversarial prompters.
+In $\texttt{ProAdvPrompter}$, the first stage (Exploration) utilizes the loss information to guide the adversarial prompter in generating suffixes that are more likely to elicit harmful responses.
+Then the second stage (Exploitation) iteratively fine-tunes the prompter using high-quality generated adversarial suffixes to further boost performance.
+Additionally, we incorporate the prompt template to aid in the Exploration stage and propose a filtering mechanism to accelerate the training process in the Exploitation stage.
+We evaluate $\texttt{ProAdvPrompter}$ against the well-aligned LLMs (i.e., Llama2-Chat-7B and Llama3-chat-8B), achieving attack success rates of 99.68% and 97.12% respectively after 10 trials on the AdvBench dataset, thereby enhancing performance by $\sim 2$ times compared to previous works.
+Moreover, $\texttt{ProAdvPrompter}$ reduces training time by 20% on Llama3-Instruct-8B, generates more generalized adversarial suffixes, and demonstrates resilience against the perplexity defense.
+An ablation study further evaluates the effects of key components in $\texttt{ProAdvPrompter}$ (the prompt template and the filtering mechanism).
+
+## Metadata
+- venue: ICLR
+- year: 2025
+- authors: Hao Di, Tong He, Haishan Ye, Yinghui Huang, Xiangyu Chang, Guang Dai, Ivor Tsang
+- arxiv_id: 
+- openreview_id: tpHqsyZ3YX
+- anthology_id: 
+- pdf_url: https://openreview.net/pdf/7b86aec02e741d1f4a4b1f024325c6dbe236ee8c.pdf
+- published: 2025
+- keywords: jailbreaking attacks; large language model

@@ -1,0 +1,31 @@
+---
+title: "DMax: Aggressive Parallel Decoding for dLLMs"
+authors: ["Zigeng Chen", "Gongfan Fang", "Xinyin Ma", "Ruonan Yu", "Xinchao Wang"]
+venue: "arXiv"
+year: 2026
+venue_class: "etc"
+arxiv_id: "2604.08302"
+openreview_id: ""
+anthology_id: ""
+pdf_url: "https://arxiv.org/pdf/2604.08302v1"
+published: "2026-04-09"
+categories: ["cs.LG", "cs.AI"]
+keywords: []
+venue_source: "arxiv-only"
+hunter_fetched: "2026-04-15T05:13:54+09:00"
+---
+
+# DMax: Aggressive Parallel Decoding for dLLMs
+
+## Abstract
+We present DMax, a new paradigm for efficient diffusion language models (dLLMs). It mitigates error accumulation in parallel decoding, enabling aggressive decoding parallelism while preserving generation quality. Unlike conventional masked dLLMs that decode through a binary mask-to-token transition, DMax reformulates decoding as a progressive self-refinement from mask embeddings to token embeddings. At the core of our approach is On-Policy Uniform Training, a novel training strategy that efficiently unifies masked and uniform dLLMs, equipping the model to recover clean tokens from both masked inputs and its own erroneous predictions. Building on this foundation, we further propose Soft Parallel Decoding. We represent each intermediate decoding state as an interpolation between the predicted token embedding and the mask embedding, enabling iterative self-revising in embedding space. Extensive experiments across a variety of benchmarks demonstrate the effectiveness of DMax. Compared with the original LLaDA-2.0-mini, our method improves TPF on GSM8K from 2.04 to 5.47 while preserving accuracy. On MBPP, it increases TPF from 2.71 to 5.86 while maintaining comparable performance. On two H200 GPUs, our model achieves an average of 1,338 TPS at batch size 1. Code is available at: https://github.com/czg1225/DMax
+
+## Metadata
+- venue: arXiv
+- year: 2026
+- authors: Zigeng Chen, Gongfan Fang, Xinyin Ma, Ruonan Yu, Xinchao Wang
+- arxiv_id: 2604.08302
+- openreview_id: 
+- anthology_id: 
+- pdf_url: https://arxiv.org/pdf/2604.08302v1
+- published: 2026-04-09

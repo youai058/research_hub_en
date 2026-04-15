@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "source_file": "/home1/irteam/sw/research_hub/docs/lessons-impl.md",
+  "source_sha": "0efd3eb0ecb4b732e63f1d6a52a623d220771d086510fb49742591e9a5ea9305",
+  "extracted_at": "2026-04-15T09:25:21+09:00",
+  "author_agent": "lesson.py",
+  "nodes": [
+    {
+      "id": "lesson:impl--2026-04-15-force-commit-hook-global-step-counter-block",
+      "type": "Lesson",
+      "name": "force-commit hook은 global step counter로 모든 block을 덮어야 한다",
+      "meta": {
+        "domain": "impl",
+        "date": "2026-04-15",
+        "rule": "force-commit 훅은 global abs_step에 트리거되고, fire 시점에 gen 영역 전체(모든 block)의 still-masked 포지션을 한 번에 덮어쓴 뒤 스케줄러 루프를 short-circuit한다",
+        "why": "block-local로 구현하면 fire 시점에 current/prior block만 허용되는데 거기는 이미 committed라 no-op이 되어 smoke test가 baseline과 bit-exact 결과를 낸다. 2026-04-15 diffusion-llm-step iter1에서 실제로 발생",
+        "when": "masked-diffusion LM sampler에 intervention hook을 넣을 때 — baseline과 결과가 동일하면 즉시 의심하고 touched-positions 수로 검증하라"
+      }
+    }
+  ],
+  "edges": []
+}

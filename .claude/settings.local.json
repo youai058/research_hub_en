@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p .claude/tests)",
+      "Bash(mv .claude/scripts/test_loop_state.py .claude/tests/test_loop_state.py)"
+    ]
+  }
+}
