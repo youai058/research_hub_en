@@ -63,6 +63,7 @@ paper-hunter가 `raw.md`로 수집한 논문 풀을 읽고, 현재 주제와 관
 - JSON 파싱 실패 → 스크립트 버그 보고
 - `topic_log.py append` 실패 → stderr 경고 + accepted path 정상 출력 (fatal 아님)
 - `--topic-from <slug>` 해당 파일 없음 → exit 4
+- `--topic-spec <path>` 파일 없음 또는 `topic_spec.py validate` 실패 → exit 2 (스펙 오류 전파)
 
 ## 협업
 
