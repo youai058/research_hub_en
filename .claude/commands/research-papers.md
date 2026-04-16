@@ -15,6 +15,35 @@ Check if a search topic is present. If `$ARGUMENTS` is empty and no `--slug <exi
 
 If `papers/vector_db/manifest.json` already exists with many files, still proceed — `papers` may re-run to extend the corpus.
 
+## Step 1.5 — Topic Refinement (Socratic interview)
+
+Invoke the `topic-refine` skill **in the main session** (not a subagent — the interview needs TUI interactivity). Pass `$ARGUMENTS` as `raw_input`.
+
+```bash
+# The skill is self-contained; Claude reads its SKILL.md and runs the interview.
+# No CLI invocation here — the main session calls the skill directly.
+```
+
+The skill will:
+
+1. Run 2–5 adaptive rounds asking from 3 perspectives (Scope Definer / Keyword Strategist / Triage Sharpener).
+2. Write `research/topics/.pending.topic.json` on termination.
+3. Validate it with `topic_spec.py validate`.
+
+After the skill returns, confirm the staging file exists:
+
+```bash
+test -f /home/irteam/sw/research_hub/research/topics/.pending.topic.json \
+    || { echo "topic-refine did not emit .pending.topic.json"; exit 3; }
+python3 /home/irteam/sw/research_hub/.claude/skills/topic-refine/scripts/topic_spec.py \
+    validate /home/irteam/sw/research_hub/research/topics/.pending.topic.json
+```
+
+**Skip conditions**:
+
+- User passes `--slug <existing>` AND `research/topics/<existing>.topic.json` already exists → skip refinement, use the existing spec.
+- User types a valid trigger phrase (`proceed` / `진행해줘` etc.) **immediately** on the first prompt — treat as interview skip, but still emit a minimal `.pending.topic.json` (clarity_scores all 0, termination_reason `user_early_exit`) from the raw input.
+
 ## Step 2 — Enter the stage (allocate v<N>)
 
 ```bash
@@ -29,6 +58,15 @@ python3 /home/irteam/sw/research_hub/.claude/scripts/loop_state.py stage-enter \
 
 Parse the returned JSON (`slug`, `stage_version`, `plan_dir`, `report_dir`). If `status: "busy"`, the previous stage did not complete — ask the user whether to (a) `stage-complete --force` the previous one, or (b) abort. Do not pick silently.
 
+After slug allocation, rename the staging topic spec:
+
+```bash
+mv /home/irteam/sw/research_hub/research/topics/.pending.topic.json \
+   /home/irteam/sw/research_hub/research/topics/<slug>.topic.json
+```
+
+If the rename fails (file missing — only possible when using `--slug <existing>` with a pre-existing spec), proceed using the existing `<slug>.topic.json`.
+
 ## Step 3 — Phase A: delegate to orchestrator
 
 Dispatch the `orchestrator` agent with:
@@ -37,7 +75,8 @@ Dispatch the `orchestrator` agent with:
 - slug: (from script output)
 - stage_version: (from script output)
 - plan_dir: (from script output)
-- topic: $ARGUMENTS
+- topic_spec: `research/topics/<slug>.topic.json` (canonical — consumed by paper-hunter A-1 and paper-triage A-2)
+- topic (legacy fallback): $ARGUMENTS (raw user string, used only if orchestrator cannot find the spec)
 
 Orchestrator MUST produce `research/plans/papers/<slug>/v<N>/PLAN.md` via the paper-hunter agent (planning-only mode — no downloads yet). It MUST include:
 
