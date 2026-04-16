@@ -29,7 +29,7 @@ description: "논문 수집. 기본은 6 whitelist venue(NeurIPS·AAAI·ICLR·IC
 hunter는 **recall 담당**, narrow 관련도 판단은 하류 triage(`--topic`)에 위임 (hunter=recall / triage=precision 경계).
 
 - 사용자가 준 topic에서 **분야(field)를 추출해 canonical 용어로 변환**한 것을 키워드로 쓴다. 주제 문장·narrow 방법명을 그대로 쓰지 않는다.
-- 축 2-3개로 분해하고, 잘 확립된 분야는 canonical 용어 1개 + synonym 정도로 충분.
+- 축 **최대 2개**로 분해하고, 잘 확립된 분야는 canonical 용어 1개 + synonym 정도로 충분.
 - **생소·신생 분야**(표기 아직 표준화 안 됨)는 축약형·풀이·어순 변형을 여러 개 병기해 recall 확보.
 - 분야 추출과 canonical 변환은 Claude가 topic을 보고 직접 판단한다.
 - **키워드 매칭 범위: title ∪ abstract** (모든 source). arXiv는 `(ti:"kw" OR abs:"kw")` 쿼리, anthology는 listing 단계에서 title pre-filter 없이 detail fetch 후 `title + abstract` 문자열에서 매치, openreview는 venueid 전체 dump이므로 이 규칙과 무관. 이전 arxiv `abs:` 단독·anthology title pre-filter 방식은 abstract-only 또는 title-only hit을 누락했다.
