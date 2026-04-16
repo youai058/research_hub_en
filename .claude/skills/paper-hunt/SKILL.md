@@ -90,9 +90,10 @@ CLI 플래그·내부 플로우 상세는 `scripts/RUNBOOK.md` 참조.
 
 ## 실패 처리
 
-- API 429: 30s 대기 후 1회 재시도, 두 번째 429는 venue skip
+- API 429 (OpenReview/arXiv): 30s 대기 후 1회 재시도, 두 번째 429는 venue skip
+- Anthology init 실패: `acl-anthology` 패키지 import 또는 `from_repo()` 실패 시 anthology source skip
 - 인증 실패 (OpenReview): env 안내 후 venue skip (public-only fallback 시도)
-- 네트워크: 지수 백오프 3회
+- 네트워크 (arXiv): 지수 백오프 3회
 - Optional fetch 실패: 리스팅 중단하지 않음, abstract fallback, 필요 시 `venue_class: "etc"` 라우팅
 
 ## 체크리스트 (축약)

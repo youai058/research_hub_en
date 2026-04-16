@@ -52,17 +52,27 @@ for n in notes:
 - **Submission invitation이 아닌 accepted venueid**를 쓴다. Submission은 reject/withdraw 포함이라 venue로 인정 불가.
 - 인증 실패 시 public-only 모드: `OpenReviewClient(baseurl=..., username=None)` 시도.
 
-## ACL Anthology 쿼리 템플릿 (ACL/EMNLP 메인 proceedings 전용)
+## ACL Anthology 쿼리 (acl-anthology 패키지)
 
 ```python
-import urllib.request, xml.etree.ElementTree as ET
-# ACL Anthology는 BibTeX 덤프 또는 XML: https://aclanthology.org/anthology+abstracts.bib.gz
-# 프로그램별 volume URL: https://aclanthology.org/events/acl-2025/
-# 수집 시 볼륨 URL + HTML 파싱, 또는 전체 BibTeX 덤프를 로컬 파싱
+from acl_anthology import Anthology
+anthology = Anthology.from_repo()  # shallow clone on first run, git pull after
+
+coll = anthology.collections.get("2025.acl")  # "{year}.{event}"
+for vol in coll.volumes():
+    for paper in vol.papers():
+        if paper.is_frontmatter:
+            continue
+        title = str(paper.title)
+        abstract = str(paper.abstract) if paper.abstract else ""
+        authors = [f"{a.name.first} {a.name.last}" for a in paper.authors]
+        pdf_url = f"https://aclanthology.org/{paper.full_id}.pdf"
 ```
 
+- `Anthology.from_repo()` → shallow clone (~210MB) of `acl-org/acl-anthology` GitHub repo. 이후 호출은 `git pull`만.
+- Rate limit 없음 (로컬 데이터).
 - ACL/EMNLP main proceedings(`.acl-long`, `.acl-short`, `.emnlp-main` 등)는 whitelist → `papers/metadata/<ACL|EMNLP>/<Year>/`로 라우팅.
-- NAACL · Findings(`.findings-*`) · 기타 워크숍 볼륨은 `ANTHOLOGY_WHITELIST_EVENTS = {ACL:acl, EMNLP:emnlp}` 밖이라 anthology 리스팅에서 **아예 조회되지 않는다**. 이 venue들이 `papers/metadata/etc/<Year>/`로 들어오는 경로는 arXiv comment 파싱뿐이며, `--include-arxiv` opt-in 시 `classify_route()`가 `venue_class: "etc"`로 라우팅하고 frontmatter `venue: "NAACL"` / `"ACL Findings"` 라벨을 보존한다.
+- NAACL은 `ANTHOLOGY_WHITELIST_EVENTS`에 포함되어 스캔되지만 `classify_route()`가 `etc`로 분류. `--include-arxiv` opt-in 시만 저장.
 
 ## Dedup 규칙 (상세)
 
