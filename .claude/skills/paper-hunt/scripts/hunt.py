@@ -619,7 +619,7 @@ def hunt_anthology_year(
                     continue
 
                 cap_key = (venue, v_year)
-                if per_venue_year_counts.get(cap_key, 0) >= max_per_venue_year:
+                if max_per_venue_year > 0 and per_venue_year_counts.get(cap_key, 0) >= max_per_venue_year:
                     continue
 
                 abstract = str(paper.abstract) if paper.abstract else ""
