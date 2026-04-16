@@ -91,6 +91,7 @@ OPENREVIEW_WHITELIST_VENUEID = {
 ANTHOLOGY_WHITELIST_EVENTS = {
     "ACL": "acl",
     "EMNLP": "emnlp",
+    "NAACL": "naacl",
 }
 
 # Canonical order matching the 6 whitelist venues in user-facing order.
@@ -171,6 +172,34 @@ def save_manifest(path: Path, m: dict) -> None:
 
 # ------------------------------------------------------------------ raw.md writer
 
+def _presentation_rank(venue_content: str) -> int:
+    """Return sort key from OpenReview content.venue field.
+
+    Oral=0, Spotlight=1, Poster=2, Unknown=3.  Case-insensitive.
+    ICML 2025 uses 'spotlightposter' — treated as spotlight (rank 1).
+    """
+    v = venue_content.lower()
+    if "oral" in v:
+        return 0
+    if "spotlight" in v:
+        return 1
+    if "poster" in v:
+        return 2
+    return 3
+
+
+def _presentation_type(venue_content: str) -> str:
+    """Extract presentation type label from OpenReview content.venue field."""
+    v = venue_content.lower()
+    if "oral" in v:
+        return "oral"
+    if "spotlight" in v:
+        return "spotlight"
+    if "poster" in v:
+        return "poster"
+    return ""
+
+
 def _route_path(root: Path, venue: str, year: int, venue_class: str, slug: str) -> Path:
     if venue_class == "whitelist":
         return root / "papers" / "metadata" / venue / str(year) / f"{slug}.raw.md"
@@ -195,6 +224,7 @@ def write_raw(
     categories: list[str] | None = None,
     keywords: list[str] | None = None,
     venue_source: str = "",
+    presentation_type: str = "",
 ) -> Path:
     slug = slugify(title)
     out = _route_path(root, venue, year, venue_class, slug)
@@ -208,6 +238,7 @@ def write_raw(
         "venue": venue,
         "year": year,
         "venue_class": venue_class,
+        "presentation_type": presentation_type or "",
         "arxiv_id": arxiv_id or "",
         "openreview_id": openreview_id or "",
         "anthology_id": anthology_id or "",
@@ -332,7 +363,7 @@ def hunt_arxiv_year(
                 # Prefer classifier year, else published year, else current bucket.
                 final_year = v_year or (r.published.year if r.published else year)
                 cap_key = (venue, final_year)
-                if per_venue_year_counts.get(cap_key, 0) >= max_per_venue_year:
+                if max_per_venue_year > 0 and per_venue_year_counts.get(cap_key, 0) >= max_per_venue_year:
                     continue
                 path = write_raw(
                     root,
@@ -368,6 +399,7 @@ def hunt_openreview_year(
     root: Path,
     year: int,
     venue_ids: list[str],
+    keywords: list[str],
     max_per_venue_year: int,
     seen: SeenKeys,
     manifest: dict,
@@ -407,12 +439,40 @@ def hunt_openreview_year(
             else:
                 print(f"[openreview] get_all_notes failed ({venue_id}): {e}", file=sys.stderr)
             continue
+        # Sort notes: oral → spotlight → poster so high-profile papers
+        # are processed (and fill max_per_venue_year cap) first.
+        def _note_sort_key(n):
+            c = n.content or {}
+            v = c.get("venue", {})
+            if isinstance(v, dict):
+                v = v.get("value", "")
+            return _presentation_rank(str(v))
+        notes.sort(key=_note_sort_key)
+        ptype_counts = {}
+        for n in notes:
+            c0 = n.content or {}
+            v0 = c0.get("venue", {})
+            if isinstance(v0, dict):
+                v0 = v0.get("value", "")
+            pt = _presentation_type(str(v0))
+            ptype_counts[pt or "unknown"] = ptype_counts.get(pt or "unknown", 0) + 1
+        print(f"  . sorted {len(notes)} notes by presentation type: {ptype_counts}", flush=True)
         for n in notes:
             content = n.content or {}
             title = _val(content.get("title"))
             abstract = _val(content.get("abstract"))
             if not title or not abstract:
                 continue
+            # Keyword filtering on title + abstract (same semantics as
+            # anthology and arXiv paths). Without this, a niche-topic hunt
+            # on a large venue (e.g. ICLR with 2000+ accepted papers)
+            # would emit max_per_venue_year random papers instead of
+            # relevant ones.
+            if keywords and not _kw_match(
+                str(title) + " " + str(abstract), keywords
+            ):
+                continue
+
             forum_id = n.forum or n.id
             if seen.seen(title=str(title), openreview_id=forum_id):
                 continue
@@ -436,7 +496,7 @@ def hunt_openreview_year(
                 continue
 
             cap_key = (venue, v_year)
-            if per_venue_year_counts.get(cap_key, 0) >= max_per_venue_year:
+            if max_per_venue_year > 0 and per_venue_year_counts.get(cap_key, 0) >= max_per_venue_year:
                 # Can break out of venue loop once cap reached.
                 print(f"  . cap reached for {venue} {v_year}", flush=True)
                 break
@@ -444,14 +504,20 @@ def hunt_openreview_year(
             authors = _val(content.get("authors")) or []
             if isinstance(authors, str):
                 authors = [authors]
-            keywords = _val(content.get("keywords")) or []
-            if isinstance(keywords, str):
-                keywords = [keywords]
+            paper_keywords = _val(content.get("keywords")) or []
+            if isinstance(paper_keywords, str):
+                paper_keywords = [paper_keywords]
             pdf_field = _val(content.get("pdf"))
             if pdf_field and not str(pdf_field).startswith("http"):
                 pdf_url = f"https://openreview.net{pdf_field}"
             else:
                 pdf_url = pdf_field or f"https://openreview.net/forum?id={forum_id}"
+
+            # Extract presentation type from content.venue field
+            venue_field = content.get("venue", {})
+            if isinstance(venue_field, dict):
+                venue_field = venue_field.get("value", "")
+            ptype = _presentation_type(str(venue_field))
 
             path = write_raw(
                 root,
@@ -463,95 +529,22 @@ def hunt_openreview_year(
                 abstract=str(abstract),
                 pdf_url=pdf_url,
                 openreview_id=forum_id,
-                keywords=keywords,
+                keywords=paper_keywords,
                 published=str(v_year),
                 venue_source="openreview",
+                presentation_type=ptype,
             )
             seen.add(title=str(title), openreview_id=forum_id)
             per_venue_year_counts[cap_key] = per_venue_year_counts.get(cap_key, 0) + 1
             emitted.append(path)
-            print(f"  + [{venue} {v_year} :: {vclass}] {str(title)[:80]}", flush=True)
+            ptype_tag = f" ({ptype})" if ptype else ""
+            print(f"  + [{venue} {v_year} :: {vclass}]{ptype_tag} {str(title)[:80]}", flush=True)
             time.sleep(0.2)
 
         manifest.setdefault("cursors", {})[f"openreview:{venue_id}"] = {
             "last_run": now_kst(),
         }
     return emitted
-
-
-# ------------------------------------------------------------------ HTTP utilities
-# Shared across anthology source (+ any future scraper). Uses `requests`
-# if available, else falls back to `urllib.request`. Every GET sets a
-# User-Agent because aclanthology.org blocks empty UAs.
-
-_UA = "research-hub-paperhunt/1.0"
-
-
-def _http_get(url: str, *, timeout: int = 30) -> str | None:
-    """Fetch `url` → text body. Returns None on 404 (silent), raises on
-    unrecoverable failure. Handles 429 with one retry after 30s. Uses
-    exponential backoff (3 attempts) for transient network errors."""
-    headers = {"User-Agent": _UA}
-    try:
-        import requests  # type: ignore
-        _backend = "requests"
-    except Exception:
-        requests = None  # type: ignore
-        _backend = "urllib"
-
-    last_err: Exception | None = None
-    for attempt in range(3):
-        try:
-            if _backend == "requests":
-                resp = requests.get(url, headers=headers, timeout=timeout)
-                code = resp.status_code
-                if code == 404:
-                    return None
-                if code == 429:
-                    print(f"[http] 429 {url}; sleeping 30s", file=sys.stderr)
-                    time.sleep(30)
-                    resp = requests.get(url, headers=headers, timeout=timeout)
-                    if resp.status_code == 404:
-                        return None
-                    resp.raise_for_status()
-                    return resp.text
-                resp.raise_for_status()
-                return resp.text
-            else:
-                import urllib.request
-                import urllib.error
-                req = urllib.request.Request(url, headers=headers)
-                try:
-                    with urllib.request.urlopen(req, timeout=timeout) as r:
-                        return r.read().decode("utf-8", errors="replace")
-                except urllib.error.HTTPError as he:
-                    if he.code == 404:
-                        return None
-                    if he.code == 429:
-                        print(f"[http] 429 {url}; sleeping 30s", file=sys.stderr)
-                        time.sleep(30)
-                        with urllib.request.urlopen(req, timeout=timeout) as r:
-                            return r.read().decode("utf-8", errors="replace")
-                    raise
-        except Exception as e:  # network-level
-            last_err = e
-            wait = 2 ** attempt
-            print(
-                f"[http] attempt {attempt + 1}/3 failed ({type(e).__name__}: {e}); "
-                f"retry in {wait}s",
-                file=sys.stderr,
-            )
-            time.sleep(wait)
-    raise RuntimeError(f"GET failed after 3 attempts: {url} :: {last_err}")
-
-
-def _try_bs(html: str):
-    """Return BeautifulSoup(html) if bs4 available, else None."""
-    try:
-        from bs4 import BeautifulSoup  # type: ignore
-        return BeautifulSoup(html, "html.parser")
-    except Exception:
-        return None
 
 
 def _kw_match(text: str, keywords: list[str]) -> bool:
@@ -584,138 +577,6 @@ class _Shim:
         self.published = _P(published_year) if published_year else None
 
 
-# ------------------------------------------------------------------ ACL Anthology
-
-# Anthology listing-page anchors look like:
-#   /2024.acl-long.123/           (main long)
-#   /2024.findings-acl.45/        (findings)
-#   /2024.emnlp-main.7/
-#   /2024.naacl-short.12/
-# Volume index anchors end in `.0/` and are skipped.
-_ANTH_ID_RE = re.compile(
-    r"^/((?P<yr>\d{4})\.(?P<track>(findings-)?(acl|emnlp|naacl))"
-    r"-(?P<kind>long|short|main|demos|srw|tutorials|industry|system)\.(?P<num>\d+))/?$"
-)
-
-
-def _anth_fetch_listing(year: int, event: str) -> list[tuple[str, str]]:
-    """Return [(anthology_id, title)] parsed from the event page.
-
-    `event` ∈ {'acl', 'emnlp', 'naacl'}. Silently returns [] on 404 (event
-    did not happen that year, e.g. NAACL has gap years).
-    """
-    url = f"https://aclanthology.org/events/{event}-{year}/"
-    print(f"[anthology][{year}] fetch {url}", file=sys.stderr)
-    html = _http_get(url, timeout=30)
-    if html is None:
-        print(f"[anthology][{year}] 404 {event}-{year}", file=sys.stderr)
-        return []
-    soup = _try_bs(html)
-    results: list[tuple[str, str]] = []
-
-    if soup is not None:
-        # Every paper has an <a href="/YYYY.track-kind.N/"> with the title as text.
-        for a in soup.find_all("a", href=True):
-            href = a["href"]
-            m = _ANTH_ID_RE.match(href)
-            if not m:
-                continue
-            if int(m.group("yr")) != year:
-                continue
-            if m.group("num") == "0":
-                continue  # volume index
-            title = a.get_text(" ", strip=True)
-            if not title or title.lower() in ("pdf", "bib", "abs"):
-                continue
-            aid = m.group(1)
-            results.append((aid, title))
-    else:
-        # Fallback: regex over raw HTML.
-        pat = re.compile(
-            r'href="(/(\d{4}\.(?:findings-)?(?:acl|emnlp|naacl)'
-            r'-(?:long|short|main|demos|srw|tutorials|industry|system)\.\d+)/?)">'
-            r'([^<]{4,300})</a>'
-        )
-        for m in pat.finditer(html):
-            aid_path = m.group(1)
-            aid = aid_path.strip("/")
-            inner = _ANTH_ID_RE.match("/" + aid + "/")
-            if not inner:
-                continue
-            if int(inner.group("yr")) != year or inner.group("num") == "0":
-                continue
-            title = m.group(3).strip()
-            if not title:
-                continue
-            results.append((aid, title))
-
-    # Dedup by anthology_id while preserving order.
-    uniq_seen: set[str] = set()
-    uniq: list[tuple[str, str]] = []
-    for aid, title in results:
-        if aid in uniq_seen:
-            continue
-        uniq_seen.add(aid)
-        uniq.append((aid, title))
-    return uniq
-
-
-def _anth_fetch_detail(anthology_id: str) -> dict:
-    """Fetch a paper detail page → {authors, abstract, pdf_url}.
-
-    Returns empty-string fields on failure so callers can still emit with
-    partial info.
-    """
-    url = f"https://aclanthology.org/{anthology_id}/"
-    out = {"authors": [], "abstract": "", "pdf_url": f"https://aclanthology.org/{anthology_id}.pdf"}
-    try:
-        html = _http_get(url, timeout=30)
-    except Exception as e:
-        print(f"[anthology] detail fetch failed {anthology_id}: {e}", file=sys.stderr)
-        return out
-    if html is None:
-        return out
-    soup = _try_bs(html)
-    if soup is None:
-        return out
-    try:
-        lead = soup.find("p", class_="lead")
-        if lead:
-            txt = lead.get_text(" ", strip=True)
-            # Authors are comma-separated inside the lead paragraph.
-            out["authors"] = [a.strip() for a in re.split(r",\s*", txt) if a.strip()]
-        abst = soup.find("div", class_="acl-abstract")
-        if abst:
-            atxt = abst.get_text(" ", strip=True)
-            # Strip literal "Abstract" prefix when present.
-            atxt = re.sub(r"^Abstract\s*", "", atxt)
-            out["abstract"] = atxt
-    except Exception as e:  # pragma: no cover
-        print(f"[anthology] detail parse failed {anthology_id}: {e}", file=sys.stderr)
-    return out
-
-
-def _anth_venue_label(anthology_id: str) -> tuple[str, str]:
-    """Map anthology_id → (display_venue_label, canonical_event).
-
-    - `2024.acl-long.123` → ("ACL", "acl")  [main → whitelist via classify_route]
-    - `2024.findings-emnlp.7` → ("EMNLP Findings", "emnlp")  [→ etc]
-    """
-    m = re.match(
-        r"^(\d{4})\.(findings-)?(acl|emnlp|naacl)-",
-        anthology_id,
-        re.IGNORECASE,
-    )
-    if not m:
-        return ("ACL Anthology", "acl")
-    is_findings = bool(m.group(2))
-    ev = m.group(3).lower()
-    canon = {"acl": "ACL", "emnlp": "EMNLP", "naacl": "NAACL"}[ev]
-    if is_findings:
-        return (f"{canon} Findings", ev)
-    return (canon, ev)
-
-
 def hunt_anthology_year(
     root: Path,
     year: int,
@@ -724,84 +585,72 @@ def hunt_anthology_year(
     seen: SeenKeys,
     manifest: dict,
     per_venue_year_counts: dict[tuple[str, int], int],
+    anthology,
 ) -> list[Path]:
     """ACL Anthology scanner for a single year bucket.
 
-    Scans ACL / EMNLP / NAACL event pages, enumerates every anthology_id
-    (main proceedings + Findings + workshops rolled in), filters by keyword
-    match on title (cheap) and then title+abstract after detail fetch (full).
-    Emits via the shared write_raw / classify_route path — main proceedings
-    route to whitelist, Findings/workshops to etc.
+    Uses the `acl-anthology` package (local XML data) instead of HTTP
+    scraping.  Iterates collections → volumes → papers for each event
+    in ANTHOLOGY_WHITELIST_EVENTS.
     """
     emitted: list[Path] = []
     for _canon, event in ANTHOLOGY_WHITELIST_EVENTS.items():
-        try:
-            listing = _anth_fetch_listing(year, event)
-        except Exception as e:
-            print(
-                f"[anthology][{year}] {event} listing failed: {type(e).__name__}: {e}",
-                file=sys.stderr,
-            )
+        coll_id = f"{year}.{event}"
+        coll = anthology.collections.get(coll_id)
+        if coll is None:
+            print(f"[anthology][{year}] collection {coll_id} not found", file=sys.stderr)
             continue
-        print(f"[anthology][{year}] {event}-{year}: {len(listing)} entries", flush=True)
 
-        for anthology_id, title in listing:
-            venue_label, _ev = _anth_venue_label(anthology_id)
+        paper_count = 0
+        for vol in coll.volumes():
+            for paper in vol.papers():
+                if paper.is_frontmatter:
+                    continue
+                paper_count += 1
+                title = str(paper.title)
+                anthology_id = paper.full_id
 
-            # No title-only pre-filter: user requires keyword matching to cover
-            # title AND abstract on every source (2026-04-15 lesson). We still
-            # short-circuit via the `per_venue_year_counts` cap below so detail
-            # fetches halt once max_per_venue_year hits land in a bucket.
-            if seen.seen(title=title, anthology_id=anthology_id):
-                continue
+                if seen.seen(title=title, anthology_id=anthology_id):
+                    continue
 
-            # classify_route decides whitelist vs etc from the anthology_id.
-            shim = _Shim(anthology_id=anthology_id, published_year=year)
-            venue, v_year, vclass = classify_route(shim)
-            if vclass == "etc" and not _ALLOW_ETC:
-                continue
-            if vclass != "whitelist":
-                # findings / workshops → keep the pretty label
-                venue = venue_label
-                v_year = year
+                shim = _Shim(anthology_id=anthology_id, published_year=year)
+                venue, v_year, vclass = classify_route(shim)
+                if vclass == "etc" and not _ALLOW_ETC:
+                    continue
 
-            cap_key = (venue, v_year)
-            if per_venue_year_counts.get(cap_key, 0) >= max_per_venue_year:
-                # Skip ahead: don't pay detail-fetch cost once this bucket
-                # is capped. The remaining entries may include other venues
-                # (findings vs main share the same event page), so we
-                # `continue` rather than `break`.
-                continue
+                cap_key = (venue, v_year)
+                if per_venue_year_counts.get(cap_key, 0) >= max_per_venue_year:
+                    continue
 
-            # Detail fetch for abstract + authors.
-            detail = _anth_fetch_detail(anthology_id)
-            time.sleep(0.3)
+                abstract = str(paper.abstract) if paper.abstract else ""
+                if keywords and not _kw_match(title + " " + abstract, keywords):
+                    continue
 
-            # Now run the full keyword filter (title + abstract).
-            if keywords and not _kw_match(
-                (title or "") + " " + (detail["abstract"] or ""),
-                keywords,
-            ):
-                continue
+                authors = [
+                    f"{a.name.first} {a.name.last}".strip()
+                    for a in (paper.authors or [])
+                ]
+                pdf_url = f"https://aclanthology.org/{anthology_id}.pdf"
 
-            path = write_raw(
-                root,
-                venue=venue,
-                year=v_year,
-                venue_class=vclass,
-                title=title,
-                authors=detail["authors"],
-                abstract=detail["abstract"] or "(abstract unavailable)",
-                pdf_url=detail["pdf_url"],
-                anthology_id=anthology_id,
-                published=str(v_year),
-                venue_source="anthology",
-            )
-            seen.add(title=title, anthology_id=anthology_id)
-            per_venue_year_counts[cap_key] = per_venue_year_counts.get(cap_key, 0) + 1
-            emitted.append(path)
-            print(f"  + [{venue} {v_year} :: {vclass}] {title[:80]}", flush=True)
+                path = write_raw(
+                    root,
+                    venue=venue,
+                    year=v_year,
+                    venue_class=vclass,
+                    title=title,
+                    authors=authors,
+                    abstract=abstract or "(abstract unavailable)",
+                    pdf_url=pdf_url,
+                    anthology_id=anthology_id,
+                    published=str(v_year),
+                    venue_source="anthology",
+                )
+                seen.add(title=title, anthology_id=anthology_id)
+                per_venue_year_counts[cap_key] = per_venue_year_counts.get(cap_key, 0) + 1
+                emitted.append(path)
+                print(f"  + [{venue} {v_year} :: {vclass}] {title[:80]}", flush=True)
 
+        print(f"[anthology][{year}] {event}-{year}: {paper_count} papers scanned", flush=True)
         manifest.setdefault("cursors", {})[f"anthology:{event}:{year}"] = {
             "last_run": now_kst(),
             "year": year,
@@ -854,8 +703,9 @@ def main(argv: list[str] | None = None) -> int:
     )
     ap.add_argument("--max-per-query", type=int, default=100,
                     help="Upper bound for each arXiv keyword query per year.")
-    ap.add_argument("--max-per-venue-year", type=int, default=200,
-                    help="Upper bound for (canonical venue, year) total across sources.")
+    ap.add_argument("--max-per-venue-year", type=int, default=0,
+                    help="Upper bound for (canonical venue, year) total across sources. "
+                         "0 = unlimited (collect all keyword-matching papers).")
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args(argv)
 
@@ -911,6 +761,17 @@ def main(argv: list[str] | None = None) -> int:
     seen = SeenKeys(manifest)
     per_venue_year_counts: dict[tuple[str, int], int] = {}
 
+    # Lazy-init ACL Anthology package (local XML data, no HTTP).
+    anthology_obj = None
+    if "anthology" in args.sources:
+        try:
+            from acl_anthology import Anthology  # type: ignore
+            anthology_obj = Anthology.from_repo()
+            print("[anthology] init OK (local XML data)", file=sys.stderr)
+        except Exception as e:
+            print(f"[anthology] skip — init failed: {e}", file=sys.stderr)
+            args.sources = [s for s in args.sources if s != "anthology"]
+
     all_emitted: list[Path] = []
 
     # --- year → source → venue scan loop ---
@@ -929,14 +790,16 @@ def main(argv: list[str] | None = None) -> int:
             if year_venue_ids:
                 all_emitted += hunt_openreview_year(
                     root, year, year_venue_ids,
+                    args.keywords or [],
                     args.max_per_venue_year,
                     seen, manifest, per_venue_year_counts,
                 )
 
-        if "anthology" in args.sources:
+        if "anthology" in args.sources and anthology_obj is not None:
             all_emitted += hunt_anthology_year(
                 root, year, args.keywords, args.max_per_venue_year,
                 seen, manifest, per_venue_year_counts,
+                anthology_obj,
             )
 
         if "arxiv" in args.sources and args.keywords:
