@@ -81,6 +81,16 @@ STAGE_SUBPHASES = {
 
 - **A-1 (paper-hunter)** → `papers/metadata/<V>/<Y>/*.raw.md` 수집 → advance to A-2.
 - **A-2 (paper-triage)** → accepted path 목록 → advance to A-3.
+
+    ```bash
+    python3 .claude/skills/paper-triage/scripts/collect_abstracts.py \
+        --glob "papers/metadata/**/*.raw.md" > /tmp/triage_input.json
+
+    # paper-triage agent prompt: pass --topic-spec path
+    # (legacy --topic mode remains for direct user invocations)
+    paper-triage --topic-spec research/topics/<slug>.topic.json --threshold 3.0
+    ```
+
 - **A-3 (paper-summarizer)** → adaptive Marp 요약 (PLANNING-first, 4 앵커) → advance to A-4.
 - **A-4 (rag-curator)** → ChromaDB upsert + manifest 갱신 → `papers` Report 쌍 생성 → `stage-complete`.
 - **B-1 (answer-formulator)** → Direct Answer + Evidence Chain 3–7개 (divergent ideation 금지) → advance to B-2.
@@ -104,6 +114,8 @@ STAGE_SUBPHASES = {
 
 1. 커맨드가 이미 `python3 .claude/scripts/loop_state.py stage-enter --stage <stage> --slug <slug>` 호출을 완료했음. orchestrator는 `loop_state show`로 `stage_version` 확보.
 2. 해당 stage의 Phase A 담당 에이전트(papers: paper-hunter / qa: answer-formulator / experiments: experiment-planner via experiment-design skill / analyze: results-analyst)에게 **PLAN.md만 작성** 지시. 부작용 금지.
+
+   **topic.json ingestion**: before dispatching paper-hunter, read `research/topics/<slug>.topic.json` (canonical input from `/research-papers` Step 1.5). Extract `refined_topic`, `keyword_groups`, `scope.{venues,years,include_arxiv}` and include them verbatim in the paper-hunter prompt. If the file is missing (legacy call path), fall back to the raw `topic` string.
 3. 선행 산출물 부재 감지 시 PLAN.md 상단에 `## ⚠ Prerequisite Missing` 블록 삽입 (Decision #1 — 차단 아님, 경고만).
 4. PLAN.md 경로 = `research/plans/<stage>/<slug>/v<N>/PLAN.md`. orchestrator는 공통 템플릿(Goal / Inputs / Execution Order / Parameters / Expected Artifacts / Resource Bounds / Success Criteria / Risks & Alternatives)을 에이전트에 전달.
 5. Phase A 종료 출력: PLAN.md 절대 경로 + 버전 + 3줄 요약 + Prerequisite 경고(있다면) + "PLAN.md 검토 후 피드백 주세요."
@@ -124,6 +136,14 @@ STAGE_SUBPHASES = {
 2. 각 sub-phase 종료 시 `loop_state.py stage-advance` 호출 → `sub_phase`·history 갱신.
 3. 마지막 sub-phase 성공 종료 후:
    - orchestrator가 Report payload JSON 구성 → `.claude/scripts/report_builder.py --payload <json>` 호출 → `Report.md` + `Report.slides.md` 쌍 생성.
+
+     The papers-stage `body` payload MUST include these fields (from `<slug>.topic.json`):
+
+     - `refined_topic`: string from topic.json
+     - `clarity_scores`: object `{scope, triage, keywords}` from topic.json
+     - `interview_rounds`: int from topic.json
+     - `termination_reason`: string from topic.json
+
    - `loop_state.py stage-complete` 호출 → `stage="idle"`, `inner_phase=null`, `sub_phase=null` 리셋.
 4. 최종 출력(사용자에게, Decision #6 준수):
    - `Report.md` + `Report.slides.md` 절대 경로
