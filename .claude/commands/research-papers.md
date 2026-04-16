@@ -39,10 +39,16 @@ python3 /home/irteam/sw/research_hub/.claude/skills/topic-refine/scripts/topic_s
     validate /home/irteam/sw/research_hub/research/topics/.pending.topic.json
 ```
 
-**Skip conditions**:
+**Halting rules (Step 1.5)** — if any of the following occur, surface the error to the user and stop **before** Step 2 runs. Do not call `stage-enter`.
 
-- User passes `--slug <existing>` AND `research/topics/<existing>.topic.json` already exists → skip refinement, use the existing spec.
-- User types a valid trigger phrase (`proceed` / `진행해줘` etc.) **immediately** on the first prompt — treat as interview skip, but still emit a minimal `.pending.topic.json` (clarity_scores all 0, termination_reason `user_early_exit`) from the raw input.
+- User interrupts the interview (Ctrl+C, explicit "취소" / "abort" / "stop") → `.pending.topic.json` may not exist; the `test -f` check fails with `exit 3`. Do not retry silently.
+- `topic_spec.py validate` exits non-zero → the spec is malformed. Report the validation error verbatim and stop. Do not proceed with a broken spec.
+- In both cases, remove any partial `.pending.topic.json` (`rm -f /home/irteam/sw/research_hub/research/topics/.pending.topic.json`) before exiting so the next `/research-papers` run starts clean.
+
+**Skip conditions** (do NOT run interview):
+
+- User passes `--slug <existing>` AND `research/topics/<existing>.topic.json` already exists → skip refinement entirely (no staging file written); Step 2 reuses the existing spec.
+- User types a valid trigger phrase (`proceed` / `진행해줘` etc. — see CLAUDE.md §4.3 whitelist) **immediately** on the first interview prompt — treat as early exit, emit a minimal `.pending.topic.json` (clarity_scores all 0, termination_reason `user_early_exit`) from the raw input, then continue to Step 2.
 
 ## Step 2 — Enter the stage (allocate v<N>)
 
@@ -58,14 +64,20 @@ python3 /home/irteam/sw/research_hub/.claude/scripts/loop_state.py stage-enter \
 
 Parse the returned JSON (`slug`, `stage_version`, `plan_dir`, `report_dir`). If `status: "busy"`, the previous stage did not complete — ask the user whether to (a) `stage-complete --force` the previous one, or (b) abort. Do not pick silently.
 
-After slug allocation, rename the staging topic spec:
+**On abort (busy-status path)**: remove the orphaned staging file before returning control to the user, so the next `/research-papers` run does not silently consume a stale interview result:
+
+```bash
+rm -f /home/irteam/sw/research_hub/research/topics/.pending.topic.json
+```
+
+After successful slug allocation, rename the staging topic spec into its canonical location (shell variables below are the literal `slug` value returned by `stage-enter`):
 
 ```bash
 mv /home/irteam/sw/research_hub/research/topics/.pending.topic.json \
    /home/irteam/sw/research_hub/research/topics/<slug>.topic.json
 ```
 
-If the rename fails (file missing — only possible when using `--slug <existing>` with a pre-existing spec), proceed using the existing `<slug>.topic.json`.
+If the rename fails because `.pending.topic.json` is missing, this is only expected when Step 1.5 was skipped via `--slug <existing>` with a pre-existing `<slug>.topic.json`. In that case, proceed using the existing spec. Any other missing-file case is a bug — stop and report.
 
 ## Step 3 — Phase A: delegate to orchestrator
 
