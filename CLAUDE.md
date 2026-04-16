@@ -90,7 +90,7 @@
 
 ### 4.3 Phase B 트리거 whitelist (대소문자 무관, trim 후 정확 매칭)
 
-- 한국어: `구현해줘`, `실행해줘`, `진행해줘`, `ok 해`, `시작해`, `좋아 진행`, `ok 진행`
+- 한국어: `구현해줘`, `실행해줘`, `진행해줘`, `ok 해`, `시작해`, `좋아 진행`, `ok 진행`, `진행해`
 - 영어: `proceed`, `go ahead`, `run it`, `execute`, `ok run it`, `ok proceed`
 
 판정은 `python3 .claude/scripts/loop_state.py trigger-check "<phrase>"`. 이외 발화는 전부 피드백으로 간주 → Phase A 재진입.

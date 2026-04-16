@@ -84,7 +84,7 @@ ALL_SUBPHASES: set[str] = {sp for seq in STAGE_SUBPHASES.values() for sp in seq}
 # as standalone Korean fillers. Keep composites (구현해줘, ok 해, 좋아 진행).
 TRIGGER_WHITELIST_KO = [
     "구현해줘", "실행해줘", "진행해줘", "ok 해", "시작해",
-    "좋아 진행", "ok 진행",
+    "좋아 진행", "ok 진행", "진행해",
 ]
 TRIGGER_WHITELIST_EN = [
     "proceed", "go ahead", "run it", "execute", "ok run it", "ok proceed",
