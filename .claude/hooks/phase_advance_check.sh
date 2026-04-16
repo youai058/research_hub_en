@@ -76,9 +76,9 @@ if stage == "papers":
     elif sub == "A-2":
         suggestion = "A-2 → A-3: triage accepted list ready. Route to paper-summarizer."
     elif sub == "A-3":
-        suggestion = "A-3 → A-4: 5-part summaries written. Route to rag-curator for incremental upsert."
+        suggestion = "A-3 → A-4: adaptive Marp summaries written. Route to rag-curator for incremental upsert."
     elif sub == "A-4":
-        manifest = os.path.join(root, "papers", "rag", "manifest.json")
+        manifest = os.path.join(root, "papers", "vector_db", "manifest.json")
         if os.path.isfile(manifest):
             suggestion = f"A-4 terminal: manifest.json updated. Build Report pair and `stage-complete`."
 
@@ -93,11 +93,7 @@ elif stage == "qa":
             suggestion = f"B-2 terminal: critique written. Build Report pair and `stage-complete`."
 
 elif stage == "experiments":
-    if sub == "C-1":
-        # C-1 is already satisfied by Phase A (experiment-design) in v3; advisory only if plan absent.
-        if not exists(experiment_plan):
-            suggestion = "C-1: experiment-level PLAN.md missing at research/plans/<slug>/PLAN.md. experiment-planner should have produced it in Phase A."
-    elif sub == "E-1":
+    if sub == "E-1":
         if exists(impl_map) and exists(run_sh):
             suggestion = "E-1 → E-2: IMPL_MAP.md + run.sh present. Hand off to implementation-verifier."
     elif sub == "E-2":

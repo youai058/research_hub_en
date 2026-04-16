@@ -32,9 +32,9 @@ def main() -> int:
     ap.add_argument("--root", default=None)
     args = ap.parse_args()
     root = find_root(args.root)
-    rag_dir = root / "papers" / "rag"
-    manifest_path = rag_dir / "manifest.json"
-    chroma_dir = rag_dir / "chroma"
+    vdb_dir = root / "papers" / "vector_db"
+    manifest_path = vdb_dir / "manifest.json"
+    chroma_dir = vdb_dir / "chroma"
 
     info: dict = {
         "root": str(root),

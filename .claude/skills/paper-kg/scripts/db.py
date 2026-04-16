@@ -144,7 +144,7 @@ def by_type(conn: sqlite3.Connection) -> dict[str, int]:
 if __name__ == "__main__":
     import sys
 
-    db_path = sys.argv[1] if len(sys.argv) > 1 else "papers/kg/kg.sqlite"
+    db_path = sys.argv[1] if len(sys.argv) > 1 else "papers/vector_db/kg.sqlite"
     conn = open_and_migrate(db_path)
     print(f"db: {db_path}")
     print(f"nodes: {node_count(conn)}")

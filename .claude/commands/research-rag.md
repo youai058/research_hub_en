@@ -11,7 +11,7 @@ Direct top-k query against the `papers` ChromaDB collection (bge-m3 embeddings).
 
 Steps:
 
-1. If `/home/irteam/sw/research_hub/papers/rag/.stale` exists, warn the user that the index is stale but proceed anyway (reading cached vectors).
+1. If `/home/irteam/sw/research_hub/papers/vector_db/rag.stale` exists, warn the user that the index is stale but proceed anyway (reading cached vectors).
 
 2. Run:
    ```bash

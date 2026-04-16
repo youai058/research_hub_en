@@ -13,7 +13,7 @@ Enter the `papers` stage. Four sub-phases run in Phase C: `A-1 paper-hunter → 
 
 Check if a search topic is present. If `$ARGUMENTS` is empty and no `--slug <existing>` flag is given, ask the user for a topic before proceeding.
 
-If `papers/rag/manifest.json` already exists with many files, still proceed — `papers` may re-run to extend the corpus.
+If `papers/vector_db/manifest.json` already exists with many files, still proceed — `papers` may re-run to extend the corpus.
 
 ## Step 2 — Enter the stage (allocate v<N>)
 
@@ -45,7 +45,7 @@ Orchestrator MUST produce `research/plans/papers/<slug>/v<N>/PLAN.md` via the pa
 - expected collected count
 - RAG reindex flag
 - `include_arxiv: true/false` (true only if the raw `$ARGUMENTS` contained `--include-arxiv`). This flag is propagated verbatim to `hunt.py --include-arxiv` in Phase C. When false, hunt.py restricts itself to the 6-venue whitelist (NeurIPS/AAAI/ICLR/ICML/ACL/EMNLP) and drops any etc emissions.
-- `⚠ Prerequisite Missing` block if `papers/rag/` is empty and this would create an unusually isolated corpus
+- `⚠ Prerequisite Missing` block if `papers/vector_db/` is empty and this would create an unusually isolated corpus
 
 When orchestrator returns, inner_phase must be `A`. DO NOT self-advance to B or C.
 

@@ -35,7 +35,7 @@ description: "답변(Answer)의 근거 체인 독립 비판. 4축(Grounding Vali
 ---
 critic_of: research/answers/YYYY-MM-DD_<slug>.md
 date: 2026-04-15
-iteration: 1
+stage_version: 1
 ---
 
 # Critique — {slug}

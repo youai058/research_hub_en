@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# PreToolUse(Bash) hook — block destructive operations on papers/kg/ state.
+# PreToolUse(Bash) hook — block destructive operations on papers/vector_db/ state.
 # Exits with code 2 to abort the tool call and feed stderr back to the model.
 #
 # Strategy: verb-first matching. If the command contains any destructive verb
-# AND any token that references papers/kg/<critical>, block it. This catches
+# AND any token that references papers/vector_db/<critical>, block it. This catches
 # variants the previous file-target regex missed (rm without flags, rm --,
 # cp /dev/null, dd, install, sqlite3 UPDATE/DELETE, tee, > redirect, Python
 # unlink, etc.). Use .claude/skills/paper-kg/scripts/index.py --rebuild for
@@ -27,17 +27,17 @@ cmd = (data.get("tool_input") or data.get("input") or {}).get("command", "")
 if not cmd:
     sys.exit(0)
 
-# Critical targets under papers/kg/. Any mention of these + destructive verb → block.
+# Critical targets under papers/vector_db/. Any mention of these + destructive verb → block.
 TARGET_RE = re.compile(
-    r"papers/kg/(?:kg\.sqlite|manifest\.json|extraction_log\.jsonl|"
-    r"rejected\.jsonl|schema\.version|\.stale|\.rejected_cursor)"
-    r"|papers/kg/?(?:\s|$|;|&|\||>)",
+    r"papers/vector_db/(?:kg\.sqlite|kg-manifest\.json|extraction_log\.jsonl|"
+    r"rejected\.jsonl|schema\.version|kg\.stale|rag\.stale|\.rejected_cursor|chroma)"
+    r"|papers/vector_db/?(?:\s|$|;|&|\||>)",
     re.IGNORECASE,
 )
-# Also flag whole-dir references like `papers/kg` as a standalone path token.
-KG_DIR_RE = re.compile(r"(?:^|[\s;&|><])papers/kg(?:/|\b)", re.IGNORECASE)
+# Also flag whole-dir references like `papers/vector_db` as a standalone path token.
+KG_DIR_RE = re.compile(r"(?:^|[\s;&|><])papers/vector_db(?:/|\b)", re.IGNORECASE)
 
-def targets_kg(s: str) -> bool:
+def targets_vector_db(s: str) -> bool:
     return bool(TARGET_RE.search(s) or KG_DIR_RE.search(s))
 
 # Destructive verbs / patterns. Each is checked independently; if matched AND
@@ -78,22 +78,22 @@ WHITELIST_RE = re.compile(
 if WHITELIST_RE.search(cmd):
     sys.exit(0)
 
-# Also allow writes whose only papers/kg/ reference is inside a quoted path
+# Also allow writes whose only papers/vector_db/ reference is inside a quoted path
 # argument to index.py (the sanctioned writer). Rough check: if index.py is
-# invoked and no shell redirect goes into papers/kg/, let it through.
+# invoked and no shell redirect goes into papers/vector_db/, let it through.
 INDEX_INVOKE_RE = re.compile(r"paper-kg/scripts/index\.py\b", re.IGNORECASE)
-REDIRECT_TO_KG = re.compile(r">\s*[^|;&]*papers/kg/", re.IGNORECASE)
+REDIRECT_TO_KG = re.compile(r">\s*[^|;&]*papers/vector_db/", re.IGNORECASE)
 if INDEX_INVOKE_RE.search(cmd) and not REDIRECT_TO_KG.search(cmd):
     sys.exit(0)
 
-if not targets_kg(cmd):
+if not targets_vector_db(cmd):
     sys.exit(0)
 
 for pat, label in DESTRUCTIVE:
     if re.search(pat, cmd, re.IGNORECASE):
         print(
             f"[protect_kg] blocked: '{cmd}' — destructive verb '{label}' "
-            f"against papers/kg/. Use index.py --rebuild for legitimate resets, "
+            f"against papers/vector_db/. Use index.py --rebuild for legitimate resets, "
             f"or ask the user to confirm manually.",
             file=sys.stderr,
         )

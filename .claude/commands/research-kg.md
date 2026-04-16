@@ -29,9 +29,9 @@ Single entry-point for the papers knowledge graph. First token of `$ARGUMENTS` i
      ```bash
      python3 /home/irteam/sw/research_hub/.claude/skills/paper-kg/scripts/index.py <rest>
      ```
-   - On success, the script itself clears `papers/kg/.stale`.
+   - On success, the script itself clears `papers/vector_db/kg.stale`.
    - Print the summary JSON (`scanned`, `changed`, `unchanged`, `rejected`, `total_nodes_seen`, `total_edges_seen`).
-   - If `rejected > 0`, remind the user that `papers/kg/rejected.jsonl` holds the detail and that orchestrator should re-dispatch the listed `author_agent`s.
+   - If `rejected > 0`, remind the user that `papers/vector_db/rejected.jsonl` holds the detail and that orchestrator should re-dispatch the listed `author_agent`s.
 
 3. If first token is `query`:
    - Remaining args form the question (quote them if they contain spaces) plus optional `--k N` / `--no-rag` / `--no-kg`.
@@ -67,7 +67,7 @@ Single entry-point for the papers knowledge graph. First token of `$ARGUMENTS` i
 ## Failure handling
 
 - Missing `pydantic`/`rapidfuzz`: ask the user to `conda activate LLDM && pip install pydantic rapidfuzz` rather than installing automatically.
-- Missing `papers/kg/kg.sqlite`: run `build` first (the script will auto-create it).
+- Missing `papers/vector_db/kg.sqlite`: run `build` first (the script will auto-create it).
 - Ingest errors are surfaced via `rejected.jsonl`; do not try to fix rejected files here — re-dispatch the original `author_agent` through orchestrator.
 
 This command is read-only except for the `build` subcommand. Do not launch other agents.

@@ -32,7 +32,7 @@ description: "사용자 연구 질문에 대한 근거 기반 직접 답변 form
 date: 2026-04-15
 seed_question: "<사용자 원 질문 verbatim>"
 slug: <slug>
-iteration: 1
+stage_version: 1
 ---
 
 # Answer — {slug}
@@ -124,7 +124,7 @@ Direct Answer가 커버하지 못하는 하위 질문 (다음 iteration의 seed 
 
 | 타입 | prefix | 필수 필드 |
 |---|---|---|
-| `Answer` | `answer:` | seed_question, direct_answer, slug, iteration, n_evidence_points |
+| `Answer` | `answer:` | seed_question, direct_answer, slug, stage_version, n_evidence_points |
 | `Evidence` | `evidence:` | claim, confidence (0-5), verifiability (0-5), parent_answer_id |
 
 **엣지**:

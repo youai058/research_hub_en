@@ -4,9 +4,10 @@ gemini_digest.py — Stage 1 of the 2-stage paper summarization pipeline.
 
 Reads a paper-hunter raw.md, downloads the full PDF via a 4-way fallback,
 parses it with pymupdf, and asks the Gemini CLI (gemini-3-pro-preview) to produce a
-dense, faithful content digest. The digest is written next to the raw.md under
-a hidden `.gemini_digest/` subdirectory so the Claude-side paper-summarizer
-agent can finalize the 5-part Marp summary without re-reading the PDF.
+dense, faithful content digest. Given a raw.md at papers/metadata/<V>/<Y>/<slug>.raw.md,
+the digest is written to papers/digest/<V>/<Y>/<slug>.digest.md, the PDF cache to
+papers/digest/<V>/<Y>/.pdf_cache/<slug>.pdf, and key figures to
+papers/marp-summary/<V>/<Y>/.figure_cache/<slug>.png.
 
 Usage:
     python3 gemini_digest.py <raw_md_path> [--force]
@@ -41,7 +42,7 @@ import urllib.error
 
 # -------- constants --------------------------------------------------------
 
-PROMPT_VERSION = "v2"
+PROMPT_VERSION = "v6"
 GEMINI_MODEL = "gemini-3-pro-preview"
 GEMINI_TIMEOUT_SEC = 600
 MIN_FULLTEXT_CHARS = 3000
@@ -50,60 +51,61 @@ FIGURE_DPI_MATRIX = 3  # ~216 DPI at fitz default 72 DPI
 FIGURE_MIN_BYTES = 10 * 1024  # 10KB sanity threshold
 FIGURE_MIN_HEIGHT_FRAC = 0.10  # refined bbox must be >=10% of page height
 
-DIGEST_PROMPT = """You are extracting a dense, faithful content digest of a research paper for a downstream critical-reading agent. The paper's full text has been provided above via stdin.
+DIGEST_PROMPT = """You are extracting a DENSE, FAITHFUL content digest of a research paper. The paper's full text has been provided above via stdin.
 
-Produce a Markdown digest with these sections, in this order:
+**CRITICAL CONTEXT**: The downstream agent (Claude) will NOT have access to the PDF. It writes the final summary using ONLY your digest + the paper's abstract metadata. Therefore your digest must contain every equation, every number, every hyperparameter, every result, and enough narrative context to let Claude later decide an adaptive section layout. Under-extraction here = broken summary downstream.
 
-# Metadata
-- Title, authors, venue, year (verbatim from the paper).
+Your job is to extract as much content as possible from the paper, following the paper's own structure. Do NOT reorganize into a fixed template — mirror the paper's section layout.
 
-# Claims (verbatim)
-- Bullet list of the paper's explicit claims. Quote the author's own wording using blockquotes. Do NOT paraphrase. Do NOT add interpretation.
+## Instructions
 
-# Methodology
-- Core idea in one sentence, then the technical details.
-- Every equation that appears in the main text, rendered in LaTeX exactly as written. Do not simplify or re-derive.
-- Algorithm pseudocode if present.
+1. **Start with metadata**: Title, authors, venue, year (verbatim).
 
-# Experimental Setup
-- Models (names + sizes), datasets (names + splits), baselines, hyperparameters (lr, batch, steps, optimizer, schedule), seeds / number of runs, hardware, training/inference budget. One field per line, original values only.
+2. **Author's framing (new)**: Immediately after metadata, add a short `## Author Framing` block:
+   - One-sentence restatement of what the paper claims to show (as the authors themselves phrase it).
+   - One sentence on the core intuition / mechanism in plain language.
+   - 2–4 bullets listing the stated contributions, in the authors' own wording.
+   This block exists so the downstream agent can write a faithful TL;DR without re-reading the PDF.
 
-# Results
-- Every numerical result reported in the main tables and main text. Preserve original precision, units, and rounding. Organize as a table when possible.
-- Statistical significance reporting (error bars, p-values, confidence intervals) if any.
-- Report the exact comparison (baseline -> proposed method -> delta).
+3. **Follow the paper's own sections**: Use the same section headings the paper uses (e.g., "Introduction", "Related Work", "Preliminary", "Method", "Experiments", etc.). If the paper has a "3. Analysis" section, your digest should have "# 3. Analysis". Preserve the paper's numbering and hierarchy.
 
-# Ablations
-- Each ablation study the paper runs, with the variable changed and the numerical effect.
+4. **For each section, extract exhaustively**:
+   - Every equation, rendered in LaTeX exactly as written. Do not simplify or re-derive.
+   - Every numerical result with original precision, units, and rounding.
+   - Every table reproduced in Markdown table format. (The downstream summary will re-render result tables as Markdown tables — never as images — so you must provide tables in parseable Markdown.)
+   - Algorithm pseudocode if present.
+   - Key definitions, theorems, propositions verbatim.
+   - Hyperparameters, model names, dataset names, baselines — for BOTH proposed method AND every baseline individually. For EACH method (proposed AND each baseline), extract: architecture, key hyperparameters (lr, batch size, training steps/epochs, optimizer, scheduler, method-specific params), training condition (from scratch / finetune / pretrained checkpoint), and source (official repo / reimplemented / reported from paper). If any baseline HP is not reported, note "not reported" explicitly.
+   - Narrative connective tissue: 1–2 sentences per subsection summarizing WHY the authors did this, not only WHAT they did. This helps the downstream agent write narrative-style H2/H3 sections.
 
-# Limitations stated by authors
-- Only what the authors explicitly acknowledge. Do not invent limitations.
+5. **After all paper sections, append these fixed sections**:
 
 # Figures and Tables index
-- For each figure/table referenced in the main text, one line: `Fig/Tab N — short caption — what it shows`.
+- For each figure/table referenced in the main text, one line: `Fig/Tab N — short caption — what it shows — which paper section it belongs to`.
+- This index lets the downstream agent decide which figure to embed in which section of its adaptive summary.
 
-# Keywords
-- 10 to 15 keywords or key phrases the paper itself uses.
+# Figure Candidates (mandatory trailing block)
+- Emit 1 to 4 lines listing the figures most worth embedding in the summary, in **priority order** (most informative first). One candidate per line in this exact fixed pipe-delimited format:
 
-# Key Figure (mandatory trailing block)
-- After the Keywords section, emit exactly two lines in this exact fixed format, with no surrounding markdown, no bullets, no code fence:
+CANDIDATE: Figure N | Section: <Method|Motivation|Observation|Setup|Result|Analysis|Discussion> | Reason: <one sentence why this figure belongs in that summary section>
 
-KEY_FIGURE: Figure N
-KEY_FIGURE_REASON: <one sentence why this figure is the single most informative for a reader>
+- `N` is an integer that literally appears in the paper (e.g. `Figure 3`). Do NOT pick a table.
+- `Section` is a single hint token picking which adaptive-summary section is the most natural home for this figure. Use only the seven tokens above.
+- `Reason` is one sentence ending with a period, describing what the figure illustrates AND why it is useful in the chosen section.
+- Prefer figures that illustrate method / mechanism / core intuition / key observation / schedule behavior. Avoid figures that only reproduce result numbers (result tables will be rendered as Markdown tables downstream, so a result-bar-chart figure is low value and usually not worth including).
+- Do not duplicate the same figure number.
+- If the paper contains no figure at all (text-only), emit exactly one line: `CANDIDATES: NONE — <one-sentence reason>`.
+- These `CANDIDATE:` / `CANDIDATES: NONE` lines must be the LAST non-empty lines of your output, with nothing between them except newlines.
 
-- `N` is an integer figure number that literally appears in the paper (e.g. `Figure 3`). Do NOT pick a table — only Figure. If the paper has only `Figure 1`, pick `1`.
-- If the paper contains no figure at all (text-only), emit `KEY_FIGURE: NONE` and a one-sentence reason explaining why no figure is available.
-- The reason must be a single sentence on one line.
-
-Rules:
+## Rules
 - Be exhaustive on numbers and equations. The downstream agent cannot re-read the PDF.
-- Do NOT add your own critique, opinion, or comparisons to other papers.
+- Do NOT add your own critique, opinion, or comparisons to other papers. (Critical reading is Claude's job downstream.)
 - Do NOT summarize away numerical values. If the paper reports 47.3%, write 47.3%, not "about half".
-- If a section is absent in the paper, write "(not reported in paper)".
-- Target length: 2000 to 5000 words of digest. Longer is fine if the paper is dense.
+- Do NOT reorganize or merge the paper's sections. Follow the paper's structure faithfully.
+- Target length: 2500 to 6000 words of digest. Longer is fine if the paper is dense.
 - Output plain Markdown only. No code fences around the whole response.
-- **KEY_FIGURE block is mandatory**: the last two non-empty lines of your output MUST be the `KEY_FIGURE:` and `KEY_FIGURE_REASON:` lines, in that order, in the fixed format above. Do not wrap them in a section header, list, or code fence.
-- Tables are NOT figures: never write `KEY_FIGURE: Table 3`. Only `Figure N` or `NONE` are valid.
+- **Figure Candidates block is mandatory**: the last non-empty lines of your output MUST be the `CANDIDATE:` lines (1–4) or the single `CANDIDATES: NONE` line, in the fixed format above. Do not wrap them in a section header, list, or code fence.
+- Tables are NOT figures: never write `CANDIDATE: Table 3`. Only `Figure N` or `NONE` are valid.
 """
 
 
@@ -318,44 +320,67 @@ def _call_gemini(full_text: str) -> str:
     return out
 
 
-def _parse_key_figure(body: str) -> Tuple[Optional[int], Optional[str]]:
-    """Extract KEY_FIGURE trailing block from a gemini digest body.
+_SECTION_HINTS = {
+    "method",
+    "motivation",
+    "observation",
+    "setup",
+    "result",
+    "analysis",
+    "discussion",
+}
 
-    Returns (figure_number_or_None, reason_or_None). figure_number is an int
-    when Gemini picked `Figure N`, None when Gemini emitted `NONE` or when the
-    block is missing/malformed.
+
+def _parse_figure_candidates(
+    body: str,
+) -> list[tuple[int, str, str]]:
+    """Extract the trailing `CANDIDATE:` block from a gemini digest body.
+
+    Returns a list of (figure_number, section_hint, reason) tuples, in the
+    priority order Gemini emitted (most informative first). Max 4. Dedup by
+    figure number (first occurrence wins). Returns an empty list when the
+    digest contains `CANDIDATES: NONE` or when the block is missing /
+    unparseable.
+
+    Expected line format:
+        CANDIDATE: Figure N | Section: <hint> | Reason: <one sentence>
     """
-    fig_num: Optional[int] = None
-    reason: Optional[str] = None
+    # NONE shortcut — paper has no figure at all.
+    if re.search(
+        r"^\s*CANDIDATES?\s*:\s*NONE\b", body, re.MULTILINE | re.IGNORECASE
+    ):
+        return []
 
-    # Match `KEY_FIGURE: Figure 3` (case-insensitive, tolerant of `Fig.`)
-    m_fig = re.search(
-        r"^\s*KEY_FIGURE\s*:\s*(?:Figure|Fig\.?)\s*(\d+)\s*$",
-        body,
+    pattern = re.compile(
+        r"^\s*CANDIDATE\s*:\s*(?:Figure|Fig\.?)\s*(\d+)\s*"
+        r"\|\s*Section\s*:\s*([A-Za-z][A-Za-z \-]*?)\s*"
+        r"\|\s*Reason\s*:\s*(.+?)\s*$",
         re.MULTILINE | re.IGNORECASE,
     )
-    if m_fig:
-        try:
-            fig_num = int(m_fig.group(1))
-        except ValueError:
-            fig_num = None
-    else:
-        # Accept `KEY_FIGURE: NONE` as explicit no-figure signal.
-        m_none = re.search(
-            r"^\s*KEY_FIGURE\s*:\s*NONE\s*$", body, re.MULTILINE | re.IGNORECASE
-        )
-        if not m_none:
-            _log("KEY_FIGURE block missing or unparseable in gemini output")
 
-    m_reason = re.search(
-        r"^\s*KEY_FIGURE_REASON\s*:\s*(.+?)\s*$", body, re.MULTILINE | re.IGNORECASE
-    )
-    if m_reason:
-        reason = m_reason.group(1).strip()
-        # Strip any trailing sentence bleed (keep single line)
+    out: list[tuple[int, str, str]] = []
+    seen: set[int] = set()
+    for m in pattern.finditer(body):
+        try:
+            n = int(m.group(1))
+        except ValueError:
+            continue
+        if n in seen:
+            continue
+        hint_raw = m.group(2).strip().lower()
+        # Normalize to one of _SECTION_HINTS or fall back to "method".
+        hint = hint_raw if hint_raw in _SECTION_HINTS else "method"
+        reason = m.group(3).strip()
         if "\n" in reason:
             reason = reason.split("\n", 1)[0].strip()
-    return fig_num, reason
+        out.append((n, hint, reason))
+        seen.add(n)
+        if len(out) >= 4:
+            break
+
+    if not out:
+        _log("CANDIDATE block missing or unparseable in gemini output")
+    return out
 
 
 def _find_figure_caption_bbox(doc, fig_num: int):
@@ -558,10 +583,16 @@ def _write_digest(
     raw_md_path: Path,
     pdf_sha: str,
     meta: dict,
-    key_figure_label: Optional[str],
-    key_figure_reason: Optional[str],
-    key_figure_path: Optional[str],
+    figures: list[dict],
 ) -> None:
+    """Write the digest markdown file.
+
+    `figures` is a list of dicts (priority order, first = primary):
+        [{label, path, section_hint, reason}, ...]
+    May be empty when the paper has no figures or extraction failed for all.
+    The first entry (if any) is also exposed as the `key_figure_*` shortcut
+    for backward-compatible downstream readers.
+    """
     digest_path.parent.mkdir(parents=True, exist_ok=True)
 
     def _yaml_str(v: Optional[str]) -> str:
@@ -569,6 +600,8 @@ def _write_digest(
             return "null"
         # escape embedded double quotes
         return '"' + v.replace("\\", "\\\\").replace('"', '\\"') + '"'
+
+    primary = figures[0] if figures else None
 
     fm_lines = [
         "---",
@@ -581,12 +614,20 @@ def _write_digest(
         f'venue_class: "{meta.get("venue_class", "")}"',
         f'venue: "{meta.get("venue", "")}"',
         f'year: "{meta.get("year", "")}"',
-        f"key_figure_label: {_yaml_str(key_figure_label)}",
-        f"key_figure_reason: {_yaml_str(key_figure_reason)}",
-        f"key_figure_path: {_yaml_str(key_figure_path)}",
-        "---",
-        "",
+        f"key_figure_label: {_yaml_str(primary['label'] if primary else None)}",
+        f"key_figure_reason: {_yaml_str(primary['reason'] if primary else None)}",
+        f"key_figure_path: {_yaml_str(primary['path'] if primary else None)}",
     ]
+    if figures:
+        fm_lines.append("figures:")
+        for fig in figures:
+            fm_lines.append(f'  - label: {_yaml_str(fig["label"])}')
+            fm_lines.append(f'    path: {_yaml_str(fig["path"])}')
+            fm_lines.append(f'    section_hint: {_yaml_str(fig["section_hint"])}')
+            fm_lines.append(f'    reason: {_yaml_str(fig["reason"])}')
+    else:
+        fm_lines.append("figures: []")
+    fm_lines.extend(["---", ""])
     digest_path.write_text("\n".join(fm_lines) + body + "\n", encoding="utf-8")
 
 
@@ -617,10 +658,21 @@ def main() -> int:
         _fail(2, f"frontmatter parse failed: {e}")
 
     slug = _slug_from_raw(raw_md_path, meta)
-    base_dir = raw_md_path.parent
-    pdf_cache = base_dir / ".pdf_cache" / f"{slug}.pdf"
-    digest_dir = base_dir / ".gemini_digest"
-    digest_path = digest_dir / f"{slug}.digest.md"
+
+    # Derive papers_root and venue/year part from the raw.md path.
+    # raw_md_path is like: .../papers/metadata/<V>/<Y>/<slug>.raw.md
+    # We find "metadata" in the path parts, then papers_root is its parent
+    # and venue_year_part is everything between "metadata" and the filename.
+    raw_parts = raw_md_path.parts
+    try:
+        meta_idx = raw_parts.index("metadata")
+    except ValueError:
+        _fail(2, f"raw.md path does not contain 'metadata/' component: {raw_md_path}")
+    papers_root = Path(*raw_parts[:meta_idx])  # e.g. /home/.../papers
+    venue_year_part = Path(*raw_parts[meta_idx + 1 : -1])  # e.g. ICLR/2025
+
+    pdf_cache = papers_root / "digest" / venue_year_part / ".pdf_cache" / f"{slug}.pdf"
+    digest_path = papers_root / "digest" / venue_year_part / f"{slug}.digest.md"
 
     pdf_path = _ensure_pdf(meta, pdf_cache, force=args.force)
     if pdf_path is None:
@@ -644,32 +696,36 @@ def main() -> int:
     body = _call_gemini(full_text)
     _log(f"gemini digest chars={len(body)}")
 
-    # --- Key figure selection + extraction (best-effort, non-fatal) ---
-    fig_num, fig_reason = _parse_key_figure(body)
-    key_figure_label: Optional[str] = None
-    key_figure_reason: Optional[str] = fig_reason
-    key_figure_rel_path: Optional[str] = None
+    # --- Figure candidate selection + extraction (best-effort, non-fatal) ---
+    candidates = _parse_figure_candidates(body)
+    figures: list[dict] = []
+    figure_cache_dir = (
+        papers_root / "marp-summary" / venue_year_part / ".figure_cache"
+    )
 
-    if fig_num is not None:
-        key_figure_label = f"Figure {fig_num}"
-        figure_cache_dir = base_dir / ".figure_cache"
-        figure_png = figure_cache_dir / f"{slug}.png"
+    if not candidates:
+        _log("no figure candidates parsed (NONE or missing)")
+
+    for fig_num, section_hint, reason in candidates:
+        figure_png = figure_cache_dir / f"{slug}__fig{fig_num}.png"
         _log(
-            f"gemini picked KEY_FIGURE=Figure {fig_num} "
-            f"(reason={fig_reason!r})"
+            f"gemini picked candidate Figure {fig_num} "
+            f"(section_hint={section_hint}, reason={reason!r})"
         )
         extracted = _extract_figure_png(pdf_path, fig_num, figure_png)
-        if extracted is not None:
-            # Path relative to raw.md directory, POSIX separators for Marp.
-            try:
-                rel = extracted.resolve().relative_to(base_dir.resolve())
-                key_figure_rel_path = rel.as_posix()
-            except Exception:  # noqa: BLE001
-                key_figure_rel_path = f".figure_cache/{slug}.png"
-        else:
-            _log("figure extraction failed → key_figure_path=null")
-    else:
-        _log("no KEY_FIGURE picked (NONE or missing)")
+        if extracted is None:
+            _log(f"figure extraction failed for Figure {fig_num} → dropping from figures list")
+            continue
+        figures.append(
+            {
+                "label": f"Figure {fig_num}",
+                # Relative path from the marp-summary/<V>/<Y>/ directory where
+                # the final .md will live → .figure_cache/<slug>__fig<N>.png
+                "path": f".figure_cache/{slug}__fig{fig_num}.png",
+                "section_hint": section_hint,
+                "reason": reason,
+            }
+        )
 
     _write_digest(
         digest_path,
@@ -677,11 +733,9 @@ def main() -> int:
         raw_md_path,
         pdf_sha,
         meta,
-        key_figure_label=key_figure_label,
-        key_figure_reason=key_figure_reason,
-        key_figure_path=key_figure_rel_path,
+        figures=figures,
     )
-    _log(f"wrote digest: {digest_path}")
+    _log(f"wrote digest: {digest_path} (figures={len(figures)})")
     print(str(digest_path))
     return 0
 

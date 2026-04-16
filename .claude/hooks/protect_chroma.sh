@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# PreToolUse(Bash) hook — block destructive operations on papers/rag/chroma/.
+# PreToolUse(Bash) hook — block destructive operations on papers/vector_db/chroma/.
 # Exits with code 2 to abort the tool call and feed stderr back to the model.
 set -euo pipefail
 
@@ -17,9 +17,9 @@ cmd = (data.get("tool_input") or data.get("input") or {}).get("command", "")
 if not cmd:
     sys.exit(0)
 danger = [
-    r"rm\s+-[rRf]+\s+[^|;&]*papers/rag/chroma",
-    r"rm\s+-[rRf]+\s+[^|;&]*papers/rag\b",
-    r">\s*papers/rag/manifest\.json",
+    r"rm\s+-[rRf]+\s+[^|;&]*papers/vector_db/chroma",
+    r"rm\s+-[rRf]+\s+[^|;&]*papers/vector_db\b",
+    r">\s*papers/vector_db/manifest\.json",
     r"chromadb.*delete_collection",
 ]
 for pat in danger:

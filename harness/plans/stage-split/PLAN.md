@@ -30,7 +30,7 @@
 **Autonomous SSOT (제거 예정)**: `.local/feedback_autonomous.md` — `autonomous.py`/`loop_state.py.autonomous_on()`/`session_start.sh`이 참조.
 
 **Artifact 경로** (대부분 유지, 버전링 추가):
-- `papers/<V>/<Y>/<slug>.md`·`.raw.md`, `papers/rag/`, `papers/kg/`
+- `papers/marp-summary/<V>/<Y>/<slug>.md`·`papers/metadata/<V>/<Y>/<slug>.raw.md`, `papers/vector_db/`
 - `research/topics/<slug>.md`
 - (stage/slug 단위 버전링으로 전환) `research/plans/<stage>/<slug>/v<N>/PLAN.md`
 - (stage/slug 단위 버전링으로 전환) `research/reports/<stage>/<slug>/v<N>/{Report.md, Report.slides.md}`
@@ -78,10 +78,10 @@
 - **Phase C (실행)**: A-1 paper-hunter → A-2 paper-triage → A-3 paper-summarizer → A-4 rag-curator 순차 blocking 실행. 완료 시 `research/reports/papers/<slug>/v<N>/Report.md` + `Report.slides.md` 생성.
 - **산출물 경로**:
   - `research/plans/papers/<slug>/v<N>/PLAN.md`
-  - `papers/<V>/<Y>/<slug_per_paper>.raw.md` (A-1)
+  - `papers/metadata/<V>/<Y>/<slug_per_paper>.raw.md` (A-1)
   - `research/topics/<slug>.md` (A-2 runtime log)
-  - `papers/<V>/<Y>/<slug_per_paper>.md` (A-3, 5-part Marp)
-  - `papers/rag/manifest.json` 업데이트 (A-4)
+  - `papers/marp-summary/<V>/<Y>/<slug_per_paper>.md` (A-3, 6-part Marp)
+  - `papers/vector_db/manifest.json` 업데이트 (A-4)
   - `research/reports/papers/<slug>/v<N>/Report.md`
   - `research/reports/papers/<slug>/v<N>/Report.slides.md`
 - **선행 의존성**: 없음. 언제든 호출 가능.

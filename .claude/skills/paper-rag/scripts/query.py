@@ -54,7 +54,7 @@ def main() -> int:
     args = ap.parse_args()
 
     root = find_root(args.root)
-    chroma_dir = root / "papers" / "rag" / "chroma"
+    chroma_dir = root / "papers" / "vector_db" / "chroma"
     if not chroma_dir.is_dir():
         print(json.dumps({"error": f"chroma dir not found: {chroma_dir}"}))
         return 1

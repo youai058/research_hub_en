@@ -1,6 +1,6 @@
 ---
 name: paper-hunt
-description: "논문 수집. 기본은 6 whitelist venue(NeurIPS·AAAI·ICLR·ICML·ACL·EMNLP) 전용. OpenReview/ACL Anthology 스캔 + dedup + manifest cursor. workshop/Findings/arXiv preprint는 `--include-arxiv` 플래그 opt-in 시 `papers/etc/<Year>/`로 수집. 트리거: '논문 수집', 'arxiv 검색', 'OpenReview', 'venue 스캔', 'paper hunt'."
+description: "논문 수집. 기본은 6 whitelist venue(NeurIPS·AAAI·ICLR·ICML·ACL·EMNLP) 전용. OpenReview/ACL Anthology 스캔 + dedup + manifest cursor. workshop/Findings/arXiv preprint는 `--include-arxiv` 플래그 opt-in 시 `papers/metadata/etc/<Year>/`로 수집. 트리거: '논문 수집', 'arxiv 검색', 'OpenReview', 'venue 스캔', 'paper hunt'."
 ---
 
 # Paper Hunt Skill
@@ -10,7 +10,7 @@ description: "논문 수집. 기본은 6 whitelist venue(NeurIPS·AAAI·ICLR·IC
 ## 입력 / 출력
 
 - **입력**: 키워드, source 선택(openreview/anthology/arxiv), 연도 버킷(`--years`), venue 지정 방식 (`--venues` 명시 / `--venues-whitelist-all` 6개 전체), arXiv opt-in(`--include-arxiv`), 상한 (`--max-per-query` / `--max-per-venue-year`), `--date-from`(backward compat)
-- **출력**: `papers/<Venue>/<Year>/<slug>.raw.md` (whitelist). `--include-arxiv` 있을 때만 `papers/etc/<Year>/<slug>.raw.md` (etc)도 생성. `papers/rag/manifest.json` cursor 갱신, year-bucket별 카운트 로그 + grand total (whitelist/etc/per-venue-year breakdown)
+- **출력**: `papers/metadata/<Venue>/<Year>/<slug>.raw.md` (whitelist). `--include-arxiv` 있을 때만 `papers/metadata/etc/<Year>/<slug>.raw.md` (etc)도 생성. `papers/vector_db/manifest.json` cursor 갱신, year-bucket별 카운트 로그 + grand total (whitelist/etc/per-venue-year breakdown)
 
 ### 주요 CLI 플래그
 
@@ -40,16 +40,16 @@ hunter는 **recall 담당**, narrow 관련도 판단은 하류 triage(`--topic`)
 
 - **6 whitelist venue**: `NeurIPS`, `AAAI`, `ICLR`, `ICML`, `ACL`, `EMNLP` (대문자 casing 고정). whitelist 밖 venue는 `classify_route()`가 `etc` 라벨로 분류한다 (venue label은 원문 보존).
 - **venue_class ∈ {whitelist, etc}**: 모든 논문은 `classify_route()`를 거쳐 이 둘 중 하나로 라벨링된다.
-- **`etc` 라우팅은 `--include-arxiv` opt-in**: 기본 실행(플래그 없음)에서는 `etc` 분류 결과를 hunt.py가 drop하고 arXiv 소스를 아예 돌리지 않는다. `--include-arxiv`가 있을 때만 `whitelist` → `papers/<Venue>/<Year>/`, `etc` → `papers/etc/<Year>/`로 두 경로 모두 기록된다.
+- **`etc` 라우팅은 `--include-arxiv` opt-in**: 기본 실행(플래그 없음)에서는 `etc` 분류 결과를 hunt.py가 drop하고 arXiv 소스를 아예 돌리지 않는다. `--include-arxiv`가 있을 때만 `whitelist` → `papers/metadata/<Venue>/<Year>/`, `etc` → `papers/metadata/etc/<Year>/`로 두 경로 모두 기록된다.
 - **3개년 버킷, newest-first 순회**: 기본 scan 순서는 `[today.year, -1, -2]`. 루프는 `year → source → venue` (outer → inner). per-year source 순서는 `openreview → anthology → arxiv`로 **고정**. 사용자가 `--years`로 연도 순서를 주면 그 순서 그대로 존중 (내부 재정렬 금지).
 - **전역 dedup은 year 경계를 넘어 유지**: `SeenKeys`는 manifest에서 1회만 초기화되고 모든 year 버킷을 관통한다. 2026 버킷에서 본 arxiv_id/openreview_id/정규화 제목은 2025/2024 버킷에서 재처리되지 않는다. 연도 진입 시 테이블 리셋 금지.
-- **금지 디렉토리 (신규 생성 금지)**: `papers/arXiv/`, `papers/OpenReview/`, `papers/preprint/`, `papers/workshop/`, `papers/findings/` — 이런 논문은 전부 `papers/etc/<Year>/`로 모은다.
+- **금지 디렉토리 (신규 생성 금지)**: `papers/arXiv/`, `papers/OpenReview/`, `papers/preprint/`, `papers/workshop/`, `papers/findings/` — 이런 논문은 전부 `papers/metadata/etc/<Year>/`로 모은다.
 - **Full-text 정책 분리 (listing vs summarization)**:
   - 이 스킬(paper-hunt, 리스팅)은 **abstract + API 메타만** 사용해 판단·분류·dedup·`raw.md` 생성.
-  - 전문 PDF 파싱 + 5-part 요약은 **paper-summarize** 스킬의 책임 (`len(full_text) > 3000` 등 full-text 프로토콜 강제).
+  - 전문 PDF 파싱 + adaptive Marp 요약은 **paper-summarize** 스킬의 책임 (`len(full_text) > 3000` 등 full-text 프로토콜 강제).
   - **Optional full-text fetch**: (1) venue_class 분류 불가, (2) near-duplicate 의심, (3) relevance 애매 중 하나일 때만 `pymupdf`로 PDF 첫 2–3페이지만 읽어 판단 보조. `raw.md` 본문에는 여전히 abstract만 저장.
 - **frontmatter**: `venue`는 원문, `venue_class: "whitelist" | "etc"`, 그 외 id/url/published/categories/keywords/hunter_fetched.
-- **Findings of ACL/EMNLP (및 NAACL main·Findings 전체)**: 메인 proceedings 6-venue whitelist에 포함되지 않으므로 `venue_class: "etc"`. `--include-arxiv` 있을 때만 `papers/etc/<Year>/`에 `venue: "ACL Findings"` 같은 원문 라벨로 기록된다. 없으면 drop.
+- **Findings of ACL/EMNLP (및 NAACL main·Findings 전체)**: 메인 proceedings 6-venue whitelist에 포함되지 않으므로 `venue_class: "etc"`. `--include-arxiv` 있을 때만 `papers/metadata/etc/<Year>/`에 `venue: "ACL Findings"` 같은 원문 라벨로 기록된다. 없으면 drop.
 
 ## 정식 진입점 (scripts/)
 
@@ -79,7 +79,7 @@ python3 /home/irteam/sw/research_hub/.claude/skills/paper-hunt/scripts/hunt.py \
     --max-per-query 100 \
     --max-per-venue-year 200
 ```
-→ 동일하게 `year → source → venue` 순서. per-year source 순서는 `openreview → anthology → arxiv` 고정. arXiv는 각 year의 `submittedDate:[YYYY01010000 TO YYYY12312359]` 윈도우로 쿼리. openreview/anthology의 `etc` 분류도 keep되어 `papers/etc/<Year>/`에 저장.
+→ 동일하게 `year → source → venue` 순서. per-year source 순서는 `openreview → anthology → arxiv` 고정. arXiv는 각 year의 `submittedDate:[YYYY01010000 TO YYYY12312359]` 윈도우로 쿼리. openreview/anthology의 `etc` 분류도 keep되어 `papers/metadata/etc/<Year>/`에 저장.
 
 CLI 플래그·내부 플로우 상세는 `scripts/RUNBOOK.md` 참조.
 
@@ -108,7 +108,7 @@ CLI 플래그·내부 플로우 상세는 `scripts/RUNBOOK.md` 참조.
 - [ ] **전역 dedup 테이블이 year 경계를 넘어 유지됨** (버킷 진입 시 reset 금지)
 - [ ] `--max-per-venue-year` cap 준수 — per (canonical venue, year) 카운트
 - [ ] 저장 경로:
-  - whitelist → `papers/{NeurIPS|AAAI|ICLR|ICML|ACL|EMNLP}/<Year>/`
-  - etc → `papers/etc/<Year>/` (평탄) — whitelist 외 venue 포함
+  - whitelist → `papers/metadata/{NeurIPS|AAAI|ICLR|ICML|ACL|EMNLP}/<Year>/`
+  - etc → `papers/metadata/etc/<Year>/` (평탄) — whitelist 외 venue 포함
 - [ ] 금지 디렉토리 미생성 확인: `papers/arXiv/`, `papers/OpenReview/`, `papers/preprint/`, `papers/workshop/`, `papers/findings/`
 - [ ] manifest 갱신, 카운트 리포트(whitelist/etc/실패)

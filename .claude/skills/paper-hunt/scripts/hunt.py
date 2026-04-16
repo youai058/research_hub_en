@@ -4,8 +4,8 @@ Scans 3 sources in one pass — OpenReview, ACL Anthology, arXiv — applies
 `classify_route()` to every result, dedup by (normalized_title | arxiv_id |
 openreview_id | anthology_id), and emits `raw.md` files under:
 
-    papers/<Venue>/<Year>/<slug>.raw.md    (venue_class == "whitelist")
-    papers/etc/<Year>/<slug>.raw.md        (venue_class == "etc")
+    papers/metadata/<Venue>/<Year>/<slug>.raw.md    (venue_class == "whitelist")
+    papers/metadata/etc/<Year>/<slug>.raw.md        (venue_class == "etc")
 
 This script uses **abstract + API metadata only**. Full-text fetch is not
 the default path — it belongs to the paper-summarize skill. For the rare
@@ -33,7 +33,7 @@ table (normalized title + arxiv/openreview/anthology id) is preserved
 **across year buckets** — a paper seen in the 2026 bucket is not
 re-emitted in 2025/2024.
 
-Every emission updates `papers/rag/manifest.json` with file hash + mtime +
+Every emission updates `papers/vector_db/manifest.json` with file hash + mtime +
 normalized_title, and refreshes per-source cursors under `manifest.cursors`.
 Dropping a result purely because it's not whitelist is forbidden — use
 `venue_class: "etc"` instead.
@@ -173,9 +173,9 @@ def save_manifest(path: Path, m: dict) -> None:
 
 def _route_path(root: Path, venue: str, year: int, venue_class: str, slug: str) -> Path:
     if venue_class == "whitelist":
-        return root / "papers" / venue / str(year) / f"{slug}.raw.md"
+        return root / "papers" / "metadata" / venue / str(year) / f"{slug}.raw.md"
     # etc — flat year-only layout, never a source-based subdir.
-    return root / "papers" / "etc" / str(year) / f"{slug}.raw.md"
+    return root / "papers" / "metadata" / "etc" / str(year) / f"{slug}.raw.md"
 
 
 def write_raw(
@@ -904,7 +904,7 @@ def main(argv: list[str] | None = None) -> int:
     else:
         whitelist_pairs = build_openreview_venueids([], explicit_venues)  # just parse explicit
 
-    manifest_path = root / "papers" / "rag" / "manifest.json"
+    manifest_path = root / "papers" / "vector_db" / "manifest.json"
     manifest = load_manifest(manifest_path)
     # SeenKeys is built from persisted manifest, then carried across all
     # year buckets. Do NOT reset per year — global dedup is a hard rule.
@@ -949,7 +949,7 @@ def main(argv: list[str] | None = None) -> int:
         # Per-bucket summary line.
         bucket_paths = all_emitted[year_start:]
         wl = sum(1 for p in bucket_paths
-                 if str(p.relative_to(root)).split("/")[1] != "etc")
+                 if str(p.relative_to(root)).split("/")[2] != "etc")
         et = len(bucket_paths) - wl
         print(f"[year {year}] whitelist={wl}, etc={et}, bucket_total={len(bucket_paths)}",
               flush=True)
@@ -970,11 +970,12 @@ def main(argv: list[str] | None = None) -> int:
         save_manifest(manifest_path, manifest)
 
     # Grand summary: whitelist/etc total + per-venue-year breakdown.
+    # Path layout: papers/metadata/<Venue>/<Year>/ or papers/metadata/etc/<Year>/
     by_class = {"whitelist": 0, "etc": 0}
     for path in all_emitted:
         rel = str(path.relative_to(root))
         parts = rel.split("/")
-        by_class["etc" if parts[1] == "etc" else "whitelist"] += 1
+        by_class["etc" if parts[2] == "etc" else "whitelist"] += 1
 
     per_venue_year_report = {
         f"{v} {y}": c for (v, y), c in sorted(per_venue_year_counts.items())

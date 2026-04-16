@@ -1,9 +1,0 @@
-{"ts": "2026-04-15T00:14:35+09:00", "action": "upsert", "source_file": "papers/_fixture/kg-smoke/paper.kg.json", "nodes": 3, "edges": 2, "author_agent": "paper-summarizer"}
-{"ts": "2026-04-15T00:14:35+09:00", "action": "upsert", "source_file": "research/loop_state.kg.json", "nodes": 1, "edges": 0, "author_agent": "loop_state.py"}
-{"ts": "2026-04-15T00:14:35+09:00", "action": "upsert", "source_file": "docs/lessons-paper.kg.json", "nodes": 1, "edges": 0, "author_agent": "lesson.py"}
-{"ts": "2026-04-15T02:33:02+09:00", "action": "upsert", "source_file": "papers/_fixture/kg-smoke/paper.kg.json", "nodes": 3, "edges": 2, "author_agent": "paper-summarizer"}
-{"ts": "2026-04-15T02:33:02+09:00", "action": "upsert", "source_file": "research/loop_state.kg.json", "nodes": 5, "edges": 0, "author_agent": "loop_state.py"}
-{"ts": "2026-04-15T02:33:02+09:00", "action": "upsert", "source_file": "docs/lessons-paper.kg.json", "nodes": 1, "edges": 0, "author_agent": "lesson.py"}
-{"ts": "2026-04-15T03:25:12+09:00", "action": "upsert", "source_file": "papers/_fixture/kg-smoke/paper.kg.json", "nodes": 3, "edges": 2, "author_agent": "paper-summarizer"}
-{"ts": "2026-04-15T03:25:12+09:00", "action": "upsert", "source_file": "docs/lessons-paper.kg.json", "nodes": 1, "edges": 0, "author_agent": "lesson.py"}
-{"ts": "2026-04-15T04:43:31+09:00", "action": "drop", "source_file": "papers/_fixture/kg-smoke/paper.kg.json", "nodes_dropped": 3, "edges_dropped": 2, "aliases_dropped": 0}

@@ -3,7 +3,7 @@ description: Score collected raw.md papers against a topic (Claude-native, runti
 argument-hint: --topic "<string>" [--threshold 3.0 | --top-n N] [--format paths|json|table] [--topic-from <slug>] [--no-save-topic]
 ---
 
-Trigger the paper-triage agent to run a relevance pass over `papers/**/*.raw.md`.
+Trigger the paper-triage agent to run a relevance pass over `papers/metadata/**/*.raw.md`.
 
 ## Dispatch
 

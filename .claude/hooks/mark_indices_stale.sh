@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
 # PostToolUse hook — mark RAG and/or KG as stale when their source files change.
 # Two lanes:
-#   RAG lane: papers/**/*.md (not *.raw.md, not papers/rag/**, not papers/kg/**)
-#             → touch papers/rag/.stale
-#   KG  lane: papers/**/*.kg.json, research/**/*.kg.json,
+#   RAG lane: papers/marp-summary/**/*.md (not *.raw.md, not papers/vector_db/**)
+#             → touch papers/vector_db/rag.stale
+#   KG  lane: papers/vector_db/kg-staging/*.kg.json, research/**/*.kg.json,
 #             experiments/**/*.kg.json, docs/lessons*.kg.json
-#             → touch papers/kg/.stale
+#             → touch papers/vector_db/kg.stale
 set -euo pipefail
 
 # ROOT is derived from this script's location so the hook works under both
 # /home/irteam/sw/research_hub and /home1/irteam/sw/research_hub (symlink pair).
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-RAG_STALE="$ROOT/papers/rag/.stale"
-KG_STALE="$ROOT/papers/kg/.stale"
+RAG_STALE="$ROOT/papers/vector_db/rag.stale"
+KG_STALE="$ROOT/papers/vector_db/kg.stale"
 
 payload="$(cat)"
 
@@ -48,32 +48,41 @@ def touch(flag_path: str, rel_path: str, lane: str) -> None:
         f.write(f"{time.time()}\n{rel_path}\n")
     print(f"[{lane}-stale] marked due to {rel_path}", file=sys.stderr)
 
-# KG lane: any .kg.json under the research directories (but not inside
-# papers/kg/ and not under any `_fixture/` subtree — fixtures are intentional
-# test samples that would otherwise flip the stale flag every edit and drown
-# real extractions in noise; paper-kg/scripts/index.py also skips them).
+# KG lane: any .kg.json under the research directories. The only vector_db
+# subtree that carries real paper-generated KG staging files is
+# `papers/vector_db/kg-staging/`; everything else under `papers/vector_db/`
+# (chroma, sqlite, manifests, stale markers) must stay ignored. `_fixture/`
+# subtrees anywhere are intentional test samples — paper-kg/scripts/index.py
+# also skips them, so flipping the stale flag on their edits just produces
+# noise.
 kg_triggers = (
     rel.endswith(".kg.json")
-    and not rel.startswith("papers/kg/")
     and "_fixture/" not in rel
     and (
-        rel.startswith("papers/")
-        or rel.startswith("research/")
-        or rel.startswith("experiments/")
-        or rel.startswith("docs/")
+        rel.startswith("papers/vector_db/kg-staging/")
+        or (
+            not rel.startswith("papers/vector_db/")
+            and (
+                rel.startswith("papers/")
+                or rel.startswith("research/")
+                or rel.startswith("experiments/")
+                or rel.startswith("docs/")
+            )
+        )
     )
 )
 if kg_triggers:
     touch(kg_stale, rel, "kg")
     sys.exit(0)
 
-# RAG lane: markdown paper summaries under papers/ (excluding raw/rag/kg).
+# RAG lane: markdown paper summaries under papers/ (excluding raw/vector_db/metadata/digest).
 if (
     rel.startswith("papers/")
     and rel.endswith(".md")
     and not rel.endswith(".raw.md")
-    and "/rag/" not in rel
-    and "/kg/" not in rel
+    and "/vector_db/" not in rel
+    and "/metadata/" not in rel
+    and "/digest/" not in rel
 ):
     touch(rag_stale, rel, "rag")
     sys.exit(0)

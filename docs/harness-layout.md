@@ -19,11 +19,22 @@ research_hub/
 │   ├── scripts/              유틸리티 (loop_state.py v3 + report_builder.py + lesson.py)
 │   └── commands/             10종 (/research-papers, /research-qa, /research-experiments, /research-analyze, /research-status, /research-rag, /research-index, /research-lesson, /research-kg, /research-triage)
 ├── papers/
-│   ├── <Venue>/<Year>/<slug>.md      Marp 5-part 요약
-│   ├── <Venue>/<Year>/<slug>.raw.md  paper-hunter 원본 메타
-│   └── rag/
+│   ├── metadata/<Venue>/<Year>/<slug>.raw.md   paper-hunter 원본 메타
+│   ├── marp-summary/<Venue>/<Year>/<slug>.md   adaptive Marp 요약 (PLANNING-first, 4 앵커)
+│   ├── digest/<Venue>/<Year>/
+│   │   ├── <slug>.digest.md                    Gemini Stage-1 digest
+│   │   └── .pdf_cache/<slug>.pdf               PDF 캐시
+│   └── vector_db/
 │       ├── chroma/                   ChromaDB persistent store (index.py가 자동 생성)
-│       └── manifest.json             해시·mtime 증분 상태 (index.py가 자동 생성)
+│       ├── manifest.json            RAG 해시·mtime 증분 상태
+│       ├── kg.sqlite                SQLite triplestore
+│       ├── kg-manifest.json         KG 해시·ingest 상태
+│       ├── extraction_log.jsonl     KG audit log
+│       ├── rejected.jsonl           KG validation fail log
+│       ├── schema.version           KG schema version
+│       ├── rag.stale                RAG stale marker
+│       ├── kg.stale                 KG stale marker
+│       └── kg-staging/              .kg.json 부산물 수집 대기
 ├── research/
 │   ├── answers/YYYY-MM-DD_<slug>.md  answer-formulator 산출 (Direct Answer + Evidence Chain)
 │   ├── critiques/<slug>.md           근거 체인 4축 비판
@@ -88,8 +99,8 @@ Claude Code 하네스는 9종 configuration surface를 노출한다. research_hu
 |---|---|---|---|
 | 1 | `session_start.sh` | SessionStart | v3 스키마 (stage/inner_phase/sub_phase/slug/stage_version) + RAG/KG/lessons 카운트 주입. autonomous 블록 제거됨. |
 | 2 | `mark_indices_stale.sh` | PostToolUse(Write\|Edit\|MultiEdit) | papers/ 수정 시 RAG·KG stale 마커 touch |
-| 3 | `protect_chroma.sh` | PreToolUse(Write\|Edit) | `papers/rag/chroma/` 내부 파일 직접 수정 차단 |
-| 4 | `protect_kg.sh` | PreToolUse(Write\|Edit) | `papers/kg/kg.sqlite` 직접 수정 차단 |
+| 3 | `protect_chroma.sh` | PreToolUse(Write\|Edit) | `papers/vector_db/chroma/` 내부 파일 직접 수정 차단 |
+| 4 | `protect_kg.sh` | PreToolUse(Write\|Edit) | `papers/vector_db/kg.sqlite` 직접 수정 차단 |
 | 5 | `protect_external_paths.sh` | PreToolUse(Write\|Edit\|MultiEdit\|Bash) | research_hub 바깥(특히 LLM/LLDM/~/.claude) 쓰기 및 유료 API·HF 다운로드 차단 |
 | 6 | `guard_empty_rag.sh` | PreToolUse(Bash) | **advisory-only (v3)**: RAG manifest가 비었을 때 `/answer-formulate`·`/critique`·`/research-qa` 등에 stderr 경고만 (차단 안 함). `RESEARCH_HUB_GUARD_QUIET=1`로 silencing 가능. |
 | 7 | `phase_advance_check.sh` | Stop | v3 스키마 기반 stage × sub_phase 상태 보고 sub-phase advance 또는 `stage-complete` 시기 advisory 출력 (mutate 금지). |
@@ -126,7 +137,7 @@ Claude Code 하네스는 9종 configuration surface를 노출한다. research_hu
 
 | Stage | STAGE_SUBPHASES (Phase C 체인) | 산출물 |
 |---|---|---|
-| `papers` | A-1 → A-2 → A-3 → A-4 | `papers/<V>/<Y>/*.md`, `research/reports/papers/<slug>/v<N>/` |
+| `papers` | A-1 → A-2 → A-3 → A-4 | `papers/marp-summary/<V>/<Y>/*.md`, `research/reports/papers/<slug>/v<N>/` |
 | `qa` | B-1 → B-2 | `research/answers/`, `research/critiques/`, `research/reports/qa/<slug>/v<N>/` |
 | `experiments` | (C-1 satisfied in Phase A) → E-1 → E-2 → E-3 + experiment-report skill | `experiments/<slug>/`, `research/reports/experiments/<slug>/v<N>/` |
 | `analyze` | F-1 → F-2 | `research/diagnoses/`, `research/reports/analyze/<slug>/v<N>/` |
@@ -142,10 +153,6 @@ Claude Code 하네스는 9종 configuration surface를 노출한다. research_hu
 
 ## Phase B 트리거 whitelist
 
-대소문자 무관, trim 후 정확 매칭:
-- 한국어: `구현해줘`, `실행해줘`, `진행해줘`, `ok 해`, `시작해`, `좋아 진행`, `ok 진행`
-- 영어: `proceed`, `go ahead`, `run it`, `execute`, `ok run it`, `ok proceed`
-
-판정: `python3 .claude/scripts/loop_state.py trigger-check "<phrase>"` (exit 0 = pass).
+상세는 CLAUDE.md §4.3 + `.claude/scripts/loop_state.py` TRIGGER_WHITELIST 참조 (SSOT 2곳, Dedup Stage 1 lesson 2026-04-15).
 
 자세한 워크플로우는 `orchestrate` 스킬 (`.claude/skills/orchestrate/SKILL.md` + `references/stage-gate.md` + `references/report-templates.md`)에 정의되어 있다.

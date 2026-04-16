@@ -233,7 +233,7 @@ def _emit_lesson_kg(
     # so parents[1] is the research_hub root.
     try:
         root = target_md.resolve().parents[1]
-        stale = root / "papers" / "kg" / ".stale"
+        stale = root / "papers" / "vector_db" / "kg.stale"
         stale.parent.mkdir(parents=True, exist_ok=True)
         stale.touch()
     except Exception:

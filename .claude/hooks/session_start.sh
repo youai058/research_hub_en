@@ -7,10 +7,10 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 LOOP="$ROOT/research/loop_state.json"
-MANIFEST="$ROOT/papers/rag/manifest.json"
-STALE_FLAG="$ROOT/papers/rag/.stale"
-KG_DB="$ROOT/papers/kg/kg.sqlite"
-KG_STALE="$ROOT/papers/kg/.stale"
+MANIFEST="$ROOT/papers/vector_db/manifest.json"
+STALE_FLAG="$ROOT/papers/vector_db/rag.stale"
+KG_DB="$ROOT/papers/vector_db/kg.sqlite"
+KG_STALE="$ROOT/papers/vector_db/kg.stale"
 
 echo "<research-hub-session>"
 

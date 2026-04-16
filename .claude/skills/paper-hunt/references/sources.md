@@ -13,7 +13,7 @@
 
 **Canonical casing** (엄격히 고정, whitelist 6개): `NeurIPS`, `AAAI`, `ICLR`, `ICML`, `ACL`, `EMNLP`. `CANONICAL` 딕셔너리는 non-whitelist이되 자주 등장하는 venue(`IJCAI`, `NAACL`)의 라벨도 보존용으로 가지고 있다 — 이들은 `venue_class: "etc"`로 라우팅되며 `--include-arxiv` opt-in에서만 저장된다.
 
-`Findings of ACL/EMNLP/NAACL` 및 NAACL·IJCAI 메인 proceedings, 워크숍, arXiv preprint, 저널 논문은 전부 `venue_class: "etc"`다. **기본 실행(flag 없음)에서는 drop**된다. `/research-papers <topic> --include-arxiv`처럼 opt-in 플래그가 들어온 경우에만 `classify_route()`의 fallback 경로를 타고 `papers/etc/<Year>/`에 `venue`는 원문 라벨(예: "ACL Findings", "NAACL 2024") 그대로 기록된다.
+`Findings of ACL/EMNLP/NAACL` 및 NAACL·IJCAI 메인 proceedings, 워크숍, arXiv preprint, 저널 논문은 전부 `venue_class: "etc"`다. **기본 실행(flag 없음)에서는 drop**된다. `/research-papers <topic> --include-arxiv`처럼 opt-in 플래그가 들어온 경우에만 `classify_route()`의 fallback 경로를 타고 `papers/metadata/etc/<Year>/`에 `venue`는 원문 라벨(예: "ACL Findings", "NAACL 2024") 그대로 기록된다.
 
 ## arXiv 쿼리 템플릿 (opt-in: `--include-arxiv`)
 
@@ -61,8 +61,8 @@ import urllib.request, xml.etree.ElementTree as ET
 # 수집 시 볼륨 URL + HTML 파싱, 또는 전체 BibTeX 덤프를 로컬 파싱
 ```
 
-- ACL/EMNLP main proceedings(`.acl-long`, `.acl-short`, `.emnlp-main` 등)는 whitelist → `papers/<ACL|EMNLP>/<Year>/`로 라우팅.
-- NAACL · Findings(`.findings-*`) · 기타 워크숍 볼륨은 `ANTHOLOGY_WHITELIST_EVENTS = {ACL:acl, EMNLP:emnlp}` 밖이라 anthology 리스팅에서 **아예 조회되지 않는다**. 이 venue들이 `papers/etc/<Year>/`로 들어오는 경로는 arXiv comment 파싱뿐이며, `--include-arxiv` opt-in 시 `classify_route()`가 `venue_class: "etc"`로 라우팅하고 frontmatter `venue: "NAACL"` / `"ACL Findings"` 라벨을 보존한다.
+- ACL/EMNLP main proceedings(`.acl-long`, `.acl-short`, `.emnlp-main` 등)는 whitelist → `papers/metadata/<ACL|EMNLP>/<Year>/`로 라우팅.
+- NAACL · Findings(`.findings-*`) · 기타 워크숍 볼륨은 `ANTHOLOGY_WHITELIST_EVENTS = {ACL:acl, EMNLP:emnlp}` 밖이라 anthology 리스팅에서 **아예 조회되지 않는다**. 이 venue들이 `papers/metadata/etc/<Year>/`로 들어오는 경로는 arXiv comment 파싱뿐이며, `--include-arxiv` opt-in 시 `classify_route()`가 `venue_class: "etc"`로 라우팅하고 frontmatter `venue: "NAACL"` / `"ACL Findings"` 라벨을 보존한다.
 
 ## Dedup 규칙 (상세)
 
@@ -74,7 +74,7 @@ import urllib.request, xml.etree.ElementTree as ET
 
 ## Incremental Cursor
 
-`papers/rag/manifest.json`에 venue별 cursor 저장:
+`papers/vector_db/manifest.json`에 venue별 cursor 저장:
 
 ```json
 {
@@ -83,7 +83,7 @@ import urllib.request, xml.etree.ElementTree as ET
     "openreview:ICLR.cc/2026": {"last_note_id": "xxx"}
   },
   "files": {
-    "papers/ICLR/2026/attack-lldm.raw.md": {"sha256": "...", "mtime": 1234567890}
+    "papers/metadata/ICLR/2026/attack-lldm.raw.md": {"sha256": "...", "mtime": 1234567890}
   }
 }
 ```
@@ -121,5 +121,5 @@ hunter_fetched: "2026-04-14T15:00:00+09:00"
 
 - 파일명: `{slug}.raw.md` where `slug = re.sub(r'[^a-z0-9]+', '-', title.lower())[:60]`
 - 경로 분기:
-  - `venue_class == "whitelist"` → `papers/<Venue>/<Year>/<slug>.raw.md`
-  - `venue_class == "etc"` → `papers/etc/<Year>/<slug>.raw.md`
+  - `venue_class == "whitelist"` → `papers/metadata/<Venue>/<Year>/<slug>.raw.md`
+  - `venue_class == "etc"` → `papers/metadata/etc/<Year>/<slug>.raw.md`

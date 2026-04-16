@@ -22,7 +22,7 @@ import db as kgdb  # noqa: E402
 from schema import normalize_id  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
-DB_PATH = REPO_ROOT / "papers" / "kg" / "kg.sqlite"
+DB_PATH = REPO_ROOT / "papers" / "vector_db" / "kg.sqlite"
 
 try:
     from rapidfuzz import fuzz as _rf_fuzz

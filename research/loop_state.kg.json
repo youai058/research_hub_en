@@ -1,8 +1,8 @@
 {
   "version": 1,
   "source_file": "/home1/irteam/sw/research_hub/research/loop_state.json",
-  "source_sha": "11101a195d23be86fb4ba34681318de2609335819ccbd60650268c0b675707cd",
-  "extracted_at": "2026-04-15T20:54:03+09:00",
+  "source_sha": "78a16f8a60f8a89e83a5bff496d271afcdc3e9a5996ce07f65d7d3d28a2c2926",
+  "extracted_at": "2026-04-16T11:23:22+09:00",
   "author_agent": "loop_state.py",
   "nodes": [
     {
@@ -367,6 +367,160 @@
         "slug": "2026-04-15-stage-split-smoke",
         "event": "stage-completed",
         "at": "2026-04-15T20:54:03+09:00"
+      }
+    },
+    {
+      "id": "loop:2026-04-16-diffusion-llm-papers-v1-a-stage-enter",
+      "type": "LoopStage",
+      "name": "papers v1 A/null (stage-enter)",
+      "meta": {
+        "stage": "papers",
+        "stage_version": 1,
+        "inner_phase": "A",
+        "sub_phase": "null",
+        "slug": "2026-04-16_diffusion-llm",
+        "event": "stage-enter",
+        "at": "2026-04-16T02:06:18+09:00"
+      }
+    },
+    {
+      "id": "loop:2026-04-16-diffusion-llm-papers-v1-b-inner-advance",
+      "type": "LoopStage",
+      "name": "papers v1 B/null (inner-advance)",
+      "meta": {
+        "stage": "papers",
+        "stage_version": 1,
+        "inner_phase": "B",
+        "sub_phase": "null",
+        "slug": "2026-04-16_diffusion-llm",
+        "event": "inner-advance",
+        "at": "2026-04-16T02:19:31+09:00"
+      }
+    },
+    {
+      "id": "loop:2026-04-16-diffusion-llm-papers-v1-c-inner-advance",
+      "type": "LoopStage",
+      "name": "papers v1 C/A-1 (inner-advance)",
+      "meta": {
+        "stage": "papers",
+        "stage_version": 1,
+        "inner_phase": "C",
+        "sub_phase": "A-1",
+        "slug": "2026-04-16_diffusion-llm",
+        "event": "inner-advance",
+        "at": "2026-04-16T02:19:31+09:00"
+      }
+    },
+    {
+      "id": "loop:2026-04-16-diffusion-llm-papers-v1-c-sub-advance",
+      "type": "LoopStage",
+      "name": "papers v1 C/A-2 (sub-advance)",
+      "meta": {
+        "stage": "papers",
+        "stage_version": 1,
+        "inner_phase": "C",
+        "sub_phase": "A-2",
+        "slug": "2026-04-16_diffusion-llm",
+        "event": "sub-advance",
+        "at": "2026-04-16T02:53:12+09:00"
+      }
+    },
+    {
+      "id": "loop:2026-04-16-diffusion-llm-papers-v1-completed-stage-completed",
+      "type": "LoopStage",
+      "name": "papers v1 completed/A-3 (stage-completed)",
+      "meta": {
+        "stage": "papers",
+        "stage_version": 1,
+        "inner_phase": "completed",
+        "sub_phase": "A-3",
+        "slug": "2026-04-16_diffusion-llm",
+        "event": "stage-completed",
+        "at": "2026-04-16T10:27:00+09:00"
+      }
+    },
+    {
+      "id": "loop:2026-04-16-diffusion-llm-idle-v0-null-idle",
+      "type": "LoopStage",
+      "name": "idle v0 null/null (idle)",
+      "meta": {
+        "stage": "idle",
+        "stage_version": 0,
+        "inner_phase": "null",
+        "sub_phase": "null",
+        "slug": "2026-04-16_diffusion-llm",
+        "event": "idle",
+        "at": "2026-04-16T10:27:00+09:00"
+      }
+    },
+    {
+      "id": "loop:2026-04-16-diffusion-llm-papers-v2-a-stage-enter",
+      "type": "LoopStage",
+      "name": "papers v2 A/null (stage-enter)",
+      "meta": {
+        "stage": "papers",
+        "stage_version": 2,
+        "inner_phase": "A",
+        "sub_phase": "null",
+        "slug": "2026-04-16_diffusion-llm",
+        "event": "stage-enter",
+        "at": "2026-04-16T10:40:00+09:00"
+      }
+    },
+    {
+      "id": "loop:2026-04-16-diffusion-llm-papers-v2-b-inner-advance",
+      "type": "LoopStage",
+      "name": "papers v2 B/null (inner-advance)",
+      "meta": {
+        "stage": "papers",
+        "stage_version": 2,
+        "inner_phase": "B",
+        "sub_phase": "null",
+        "slug": "2026-04-16_diffusion-llm",
+        "event": "inner-advance",
+        "at": "2026-04-16T10:40:32+09:00"
+      }
+    },
+    {
+      "id": "loop:2026-04-16-diffusion-llm-papers-v2-c-inner-advance",
+      "type": "LoopStage",
+      "name": "papers v2 C/A-1 (inner-advance)",
+      "meta": {
+        "stage": "papers",
+        "stage_version": 2,
+        "inner_phase": "C",
+        "sub_phase": "A-1",
+        "slug": "2026-04-16_diffusion-llm",
+        "event": "inner-advance",
+        "at": "2026-04-16T10:40:32+09:00"
+      }
+    },
+    {
+      "id": "loop:2026-04-16-diffusion-llm-papers-v2-c-sub-advance",
+      "type": "LoopStage",
+      "name": "papers v2 C/A-4 (sub-advance)",
+      "meta": {
+        "stage": "papers",
+        "stage_version": 2,
+        "inner_phase": "C",
+        "sub_phase": "A-4",
+        "slug": "2026-04-16_diffusion-llm",
+        "event": "sub-advance",
+        "at": "2026-04-16T10:40:36+09:00"
+      }
+    },
+    {
+      "id": "loop:2026-04-16-diffusion-llm-papers-v2-completed-stage-completed",
+      "type": "LoopStage",
+      "name": "papers v2 completed/A-4 (stage-completed)",
+      "meta": {
+        "stage": "papers",
+        "stage_version": 2,
+        "inner_phase": "completed",
+        "sub_phase": "A-4",
+        "slug": "2026-04-16_diffusion-llm",
+        "event": "stage-completed",
+        "at": "2026-04-16T11:23:22+09:00"
       }
     }
   ],

@@ -16,12 +16,12 @@ sys.path.insert(0, str(SCRIPT_DIR))
 import db as kgdb  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
-KG_DIR = REPO_ROOT / "papers" / "kg"
-DB_PATH = KG_DIR / "kg.sqlite"
-MANIFEST_PATH = KG_DIR / "manifest.json"
-REJECTED_PATH = KG_DIR / "rejected.jsonl"
-STALE_PATH = KG_DIR / ".stale"
-SCHEMA_VERSION_PATH = KG_DIR / "schema.version"
+VDB_DIR = REPO_ROOT / "papers" / "vector_db"
+DB_PATH = VDB_DIR / "kg.sqlite"
+MANIFEST_PATH = VDB_DIR / "kg-manifest.json"
+REJECTED_PATH = VDB_DIR / "rejected.jsonl"
+STALE_PATH = VDB_DIR / "kg.stale"
+SCHEMA_VERSION_PATH = VDB_DIR / "schema.version"
 
 
 def _count_lines(path: Path) -> int:

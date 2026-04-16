@@ -385,7 +385,7 @@ def _emit_loop_kg(
     tmp.replace(kg_path)
 
     try:
-        stale = root / "papers" / "kg" / ".stale"
+        stale = root / "papers" / "vector_db" / "kg.stale"
         stale.parent.mkdir(parents=True, exist_ok=True)
         stale.touch()
     except Exception:
@@ -432,7 +432,7 @@ def _emit_question_kg(root: Path, slug: str, topic: str, stage: str, stage_versi
     tmp.replace(kg_path)
 
     try:
-        stale = root / "papers" / "kg" / ".stale"
+        stale = root / "papers" / "vector_db" / "kg.stale"
         stale.parent.mkdir(parents=True, exist_ok=True)
         stale.touch()
     except Exception:
@@ -811,10 +811,10 @@ def _slug_artifacts(root: Path, slug: str | None) -> dict[str, Any]:
 
 
 def _kg_status(root: Path) -> dict[str, Any]:
-    kg_dir = root / "papers" / "kg"
+    kg_dir = root / "papers" / "vector_db"
     db_path = kg_dir / "kg.sqlite"
-    stale_path = kg_dir / ".stale"
-    manifest_path = kg_dir / "manifest.json"
+    stale_path = kg_dir / "kg.stale"
+    manifest_path = kg_dir / "kg-manifest.json"
     rejected_path = kg_dir / "rejected.jsonl"
     schema_version_path = kg_dir / "schema.version"
 
@@ -874,9 +874,9 @@ def _kg_status(root: Path) -> dict[str, Any]:
 def cmd_status(args: argparse.Namespace) -> int:
     root = find_root(args.root)
     state_path = root / "research" / "loop_state.json"
-    rag_dir = root / "papers" / "rag"
+    rag_dir = root / "papers" / "vector_db"
     manifest_path = rag_dir / "manifest.json"
-    stale_flag = rag_dir / ".stale"
+    stale_flag = rag_dir / "rag.stale"
 
     state = load_state(state_path)
 

@@ -20,8 +20,8 @@ If parsing fails or either is missing, ask the user for the structured form. Do 
 ## Step 2 — Preflight (advisory)
 
 Check prerequisites:
-- `papers/rag/manifest.json` files_tracked. If 0 or missing, warn that evidence retrieval will be weak. The warning is **advisory**; the user may still proceed.
-- Prior summaries for `<slug>` in `papers/*/*/<slug>*.md` — optional.
+- `papers/vector_db/manifest.json` files_tracked. If 0 or missing, warn that evidence retrieval will be weak. The warning is **advisory**; the user may still proceed.
+- Prior summaries for `<slug>` in `papers/marp-summary/*/*/<slug>*.md` — optional.
 
 ## Step 3 — Enter the stage
 

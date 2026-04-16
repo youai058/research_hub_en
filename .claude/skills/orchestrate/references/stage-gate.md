@@ -31,7 +31,7 @@ Sub-phase lists are enforced by `loop_state.py:STAGE_SUBPHASES`.
 
 - **Writes only** `research/plans/<stage>/<slug>/v<N>/PLAN.md`.
 - Must NOT download papers, answer the question, generate code, run smoke, or render analysis visualizations.
-- If a prerequisite artifact is missing (e.g., `papers/rag/manifest.json` empty before `/research-qa`, or `results_<slug>/` empty before `/research-analyze`), prepend a block:
+- If a prerequisite artifact is missing (e.g., `papers/vector_db/manifest.json` empty before `/research-qa`, or `results_<slug>/` empty before `/research-analyze`), prepend a block:
 
   ```markdown
   ## ⚠ Prerequisite Missing
@@ -116,16 +116,13 @@ After ingesting feedback, orchestrator emits:
 
 ### 3.3 Trigger phrase whitelist (hard gate)
 
-The user's next utterance must match **exactly** one of:
+Whitelist 구(句)의 SSOT는 `.claude/scripts/loop_state.py`의 `TRIGGER_WHITELIST` 상수이며 사용자 참조본은 `CLAUDE.md §4.3`이다. 판정은 `python3 .claude/scripts/loop_state.py trigger-check "<phrase>"`의 `is_trigger` 필드로만 결정한다.
 
-- Korean: `구현해줘`, `실행해줘`, `진행해줘`, `ok 해`, `시작해`, `좋아 진행`, `ok 진행`
-- English: `proceed`, `go ahead`, `run it`, `execute`, `ok run it`, `ok proceed`
-
-Matching rules:
+Matching rules (loop_state.py가 강제):
 - Case-insensitive.
 - Leading/trailing whitespace stripped.
 - Exact match (no substring / fuzzy). Anything else is treated as feedback and routes back to Phase A.
-- Validated via `loop_state.py trigger-check "<phrase>"` (exit 0 = match, 2 = not match).
+- `trigger-check` exit 0 = match, 2 = not match.
 
 ### 3.4 Hard stop invariant
 

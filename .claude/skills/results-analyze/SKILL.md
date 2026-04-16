@@ -55,7 +55,7 @@ slug: <slug>
 answer: research/answers/YYYY-MM-DD_<slug>.md
 plan: research/plans/<slug>/PLAN.md
 results: results_<slug>/
-iteration: 3
+stage_version: 3
 date: 2026-04-15
 ---
 
@@ -67,7 +67,7 @@ date: 2026-04-15
 
 **Verification summary**: E1 CONFIRMED, E2 REFUTED, E3 INCONCLUSIVE → answer-formulator가 E2를 제거하고 E3 조건을 더 좁힌 새 Direct Answer를 작성해야 함.
 
-**Next action**: {B-1 (Answer revision) / E-1 (impl fix) / C-1 (PLAN fix) / A-1 (새 iteration) / done}
+**Next action**: {B-1 (Answer revision) / E-1 (impl fix) / C-1 (PLAN fix) / A-1 (v<N+1> 재진입) / done}
 
 ---
 
@@ -132,7 +132,7 @@ date: 2026-04-15
 
 - `loop_state.json.history` 추가:
   ```json
-  {"iteration": 3, "outcome": "claim wrong (C1) / claim supported (C2)", "next": "B-1"}
+  {"stage_version": 3, "outcome": "claim wrong (C1) / claim supported (C2)", "next": "B-1"}
   ```
 ```
 

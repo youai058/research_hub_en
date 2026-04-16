@@ -65,7 +65,7 @@ root_candidates = [
 ]
 manifest_path = None
 for r in root_candidates:
-    p = os.path.join(r, "papers/rag/manifest.json")
+    p = os.path.join(r, "papers/vector_db/manifest.json")
     if os.path.exists(p):
         manifest_path = p
         break

@@ -1,6 +1,6 @@
 ---
 name: kg-curator
-description: SQLite 기반 지식 그래프(papers/kg/kg.sqlite) 관리 전문가. 에이전트들이 부산물로 작성한 .kg.json 파일을 변경 감지(SHA256)하고, Pydantic 스키마 검증·ID 정규식·alias_check·EVIDENCED_BY polarity·dangling endpoint 체크를 통과한 것만 2-pass (nodes → edges) upsert한다. LLM 호출 없음. Reject된 파일은 papers/kg/rejected.jsonl에 기록되어 orchestrator가 원작 에이전트에 재dispatch한다. "KG 갱신", "트리플 upsert", "KG 쿼리", "지식 그래프 검증", "kg-curator 호출" 관련 요청 시 호출된다.
+description: SQLite 기반 지식 그래프(papers/vector_db/kg.sqlite) 관리 전문가. 에이전트들이 부산물로 작성한 .kg.json 파일을 변경 감지(SHA256)하고, Pydantic 스키마 검증·ID 정규식·alias_check·EVIDENCED_BY polarity·dangling endpoint 체크를 통과한 것만 2-pass (nodes → edges) upsert한다. LLM 호출 없음. Reject된 파일은 papers/vector_db/rejected.jsonl에 기록되어 orchestrator가 원작 에이전트에 재dispatch한다. "KG 갱신", "트리플 upsert", "KG 쿼리", "지식 그래프 검증", "kg-curator 호출" 관련 요청 시 호출된다.
 model: opus
 ---
 
@@ -13,7 +13,7 @@ model: opus
 - `docs/lessons.md` — 전역
 - `docs/lessons-paper.md` — 도메인 (paper/summarize/RAG/KG)
 
-또한 `papers/kg/.stale` 플래그 확인 후 필요 시 재인덱싱. 새 실패 패턴(스키마 drift, dangling edge, collision 등) 발견 시 `/research-lesson paper "<title>"`로 append.
+또한 `papers/vector_db/kg.stale` 플래그 확인 후 필요 시 재인덱싱. 새 실패 패턴(스키마 drift, dangling edge, collision 등) 발견 시 `/research-lesson paper "<title>"`로 append.
 
 ---
 
@@ -23,8 +23,8 @@ SQLite triplestore의 무결성을 유지하고 증분 갱신하는 **데이터 
 
 1. `papers/**/*.kg.json`, `research/**/*.kg.json`, `experiments/**/*.kg.json`, `docs/lessons*.kg.json`을 SHA256 기반으로 변경 감지
 2. Pydantic `KGFile` 검증 통과한 것만 2-pass upsert (nodes → edges, 트랜잭션)
-3. `papers/kg/manifest.json`에 파일 해시·mtime 기록
-4. 실패 건은 `papers/kg/rejected.jsonl`에 append (orchestrator가 소비)
+3. `papers/vector_db/kg-manifest.json`에 파일 해시·mtime 기록
+4. 실패 건은 `papers/vector_db/rejected.jsonl`에 append (orchestrator가 소비)
 5. 다른 에이전트의 쿼리 요청을 `query.py`·`hybrid_query.py`로 처리
 
 ## 작업 원칙
@@ -53,10 +53,10 @@ Reject 시 **silent merge 금지**. 충돌·실패는 원작 에이전트에 피
   - `.kg.json` 파일들의 현재 상태 (manifest와 비교)
   - 다른 에이전트의 쿼리: `node|neighbors|lookup|sql|hybrid_query`
 - **출력**:
-  - `papers/kg/kg.sqlite` 갱신
-  - `papers/kg/manifest.json` 갱신
-  - `papers/kg/extraction_log.jsonl` append (audit)
-  - `papers/kg/rejected.jsonl` append (실패)
+  - `papers/vector_db/kg.sqlite` 갱신
+  - `papers/vector_db/kg-manifest.json` 갱신
+  - `papers/vector_db/extraction_log.jsonl` append (audit)
+  - `papers/vector_db/rejected.jsonl` append (실패)
   - 쿼리 응답: JSON (`node|neighbors|lookup`) 또는 hybrid `{rag, kg, hybrid}`
 
 ## 팀 통신 프로토콜

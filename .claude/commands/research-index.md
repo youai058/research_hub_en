@@ -22,7 +22,7 @@ Steps:
 
 4. On success, clear the stale flag:
    ```bash
-   rm -f /home/irteam/sw/research_hub/papers/rag/.stale
+   rm -f /home/irteam/sw/research_hub/papers/vector_db/rag.stale
    ```
 
 5. Print the summary JSON (`changed`, `removed`, `files`, `chunks_written`, `elapsed_s`).

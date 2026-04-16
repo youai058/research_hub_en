@@ -12,8 +12,7 @@ python3 /home/irteam/sw/research_hub/.claude/skills/paper-hunt/scripts/hunt.py \
 `--years`를 생략하면 KST 기준 `[today.year, today.year-1, today.year-2]`가 기본이며,
 6-venue whitelist 전체(OpenReview ICLR/NeurIPS/ICML + Anthology ACL/EMNLP + arXiv
 comment AAAI)가 newest-first로 스윕된다. **`--include-arxiv`가 없으므로 arXiv 키워드
-소스는 자동 스킵되고 `venue_class == "etc"` 결과(NAACL·IJCAI·Findings·워크숍·preprint)는
-drop된다.**
+소스는 자동 스킵되고 `venue_class == "etc"` 결과(NAACL·IJCAI·Findings·워크숍·preprint)는 drop된다.**
 
 ## arXiv opt-in 호출 (`--include-arxiv`)
 
@@ -28,7 +27,7 @@ python3 /home/irteam/sw/research_hub/.claude/skills/paper-hunt/scripts/hunt.py \
 ```
 
 `--include-arxiv`가 붙으면 (a) arXiv 키워드 쿼리 소스가 per-year window로 돌아가고
-(b) OpenReview/Anthology가 뱉은 `venue_class == "etc"` 결과도 keep되어 `papers/etc/<Year>/`로
+(b) OpenReview/Anthology가 뱉은 `venue_class == "etc"` 결과도 keep되어 `papers/metadata/etc/<Year>/`로
 저장된다. 입력 순서가 곧 scan 우선순위다. `--years 2024 2025 2026`으로 주면 oldest-first로
 돌아간다 (내부 정렬 없음).
 
@@ -45,7 +44,7 @@ python3 /home/irteam/sw/research_hub/.claude/skills/paper-hunt/scripts/hunt.py \
 | `--sources` | `openreview anthology arxiv` | 3개 소스 중 부분집합 선택. per-year 호출 순서는 항상 `openreview → anthology → arxiv`로 **고정**. `--include-arxiv`가 없으면 `arxiv`가 리스트에 있어도 런타임에 자동 제거된다. |
 | `--max-per-query` | 100 | arXiv 키워드 1개 × 1개 year 당 상한. |
 | `--max-per-venue-year` | 200 | (canonical venue, year) 조합당 상한. 모든 source 합산. cap 도달 시 해당 venue-year 추가 emit 중단. |
-| `--manifest` | `papers/rag/manifest.json` | manifest 경로 override (미구현 자리). |
+| `--manifest` | `papers/vector_db/manifest.json` | manifest 경로 override (미구현 자리). |
 | `--dry-run` | False | manifest 갱신 skip. 로그만 찍음. |
 
 ## 내부 플로우 (year → source → venue)
@@ -90,4 +89,4 @@ export OPENREVIEW_PASSWORD='...'  # /home/irteam/sw/.env에 보관
 - `pymupdf`로 PDF 첫 2–3페이지만 읽는 것까지만 허용.
 - 트리거 조건(venue_class 분류 불가 / near-duplicate 의심 / relevance 애매) 중 하나 만족 시만.
 - `raw.md` 본문에는 abstract만 유지. fetch 결과는 분류·dedup·routing 판단용.
-- Cache: `papers/<V>/<Y>/.pdf_cache/<slug>.pdf`
+- Cache: `papers/digest/<V>/<Y>/.pdf_cache/<slug>.pdf`

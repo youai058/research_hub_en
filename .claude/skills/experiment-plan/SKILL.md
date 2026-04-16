@@ -29,7 +29,7 @@ description: "Evidence verification 실험 계획. 통과한 각 Evidence point�
 plan_for: research/answers/YYYY-MM-DD_<slug>.md
 critique: research/critiques/<slug>.md
 date: 2026-04-15
-iteration: 1
+stage_version: 1
 estimated_runtime: "2 hours on 1x A100"
 ---
 

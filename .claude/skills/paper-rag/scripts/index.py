@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Incremental RAG indexer for papers/**/*.md using ChromaDB + bge-m3.
+"""Incremental RAG indexer for papers/marp-summary/**/*.md using ChromaDB + bge-m3.
 
 Usage:
   python3 index.py                    # incremental (default)
@@ -29,7 +29,7 @@ EMBED_MODEL = "BAAI/bge-m3"
 # Directories under papers/ that must NEVER be indexed. Any path whose
 # parts include one of these (exact match) or whose component starts
 # with underscore is skipped.
-SKIP_DIRS = {"_fixture", "rag", "kg"}
+SKIP_DIRS = {"_fixture", "rag", "kg", "vector_db"}
 
 
 def find_root(explicit: str | None) -> Path:
@@ -196,11 +196,14 @@ def chunk_paper(path: Path, root: Path) -> tuple[dict, list[Chunk]]:
 
 
 def iter_papers(papers_dir: Path) -> Iterable[Path]:
-    for p in sorted(papers_dir.rglob("*.md")):
+    marp_dir = papers_dir / "marp-summary"
+    if not marp_dir.is_dir():
+        return
+    for p in sorted(marp_dir.rglob("*.md")):
         if p.name.endswith(".raw.md"):
             continue
         try:
-            rel_parts = p.relative_to(papers_dir).parts
+            rel_parts = p.relative_to(marp_dir).parts
         except ValueError:
             rel_parts = p.parts
         skip = False
@@ -261,10 +264,10 @@ def embed(model, texts: list[str]) -> list[list[float]]:
 
 def index(root: Path, rebuild: bool, rebuild_manifest: bool) -> dict:
     papers_dir = root / "papers"
-    rag_dir = papers_dir / "rag"
-    chroma_dir = rag_dir / "chroma"
-    manifest_path = rag_dir / "manifest.json"
-    rag_dir.mkdir(parents=True, exist_ok=True)
+    vdb_dir = papers_dir / "vector_db"
+    chroma_dir = vdb_dir / "chroma"
+    manifest_path = vdb_dir / "manifest.json"
+    vdb_dir.mkdir(parents=True, exist_ok=True)
 
     manifest = load_manifest(manifest_path)
     if rebuild:

@@ -1,8 +1,8 @@
 {
   "version": 1,
   "source_file": "/home1/irteam/sw/research_hub/docs/lessons-paper.md",
-  "source_sha": "0e0fc3b0408f6e7dd59ec8a76cdc2d0d854716b18af3710aac1a5df8fedd867e",
-  "extracted_at": "2026-04-15T12:12:44+09:00",
+  "source_sha": "afa0ce81b318e7d09698abc27fad1ba879499414e6f1bc72dad46b869a4d2e6d",
+  "extracted_at": "2026-04-16T10:00:06+09:00",
   "author_agent": "lesson.py",
   "nodes": [
     {
@@ -27,6 +27,18 @@
         "rule": "paper-hunter는 모든 source(arxiv/anthology/openreview)에서 키워드 매칭을 title과 abstract 양쪽에 걸쳐 수행한다. arxiv 쿼리는 `(ti:\"kw\" OR abs:\"kw\")`, anthology는 listing 단계에서 title pre-filter 없이 detail fetch 후 title+abstract 문자열에 매치, openreview는 venueid 전체 dump이므로 자동으로 양쪽 포함.",
         "why": "이전 arxiv `abs:\"kw\"` 단독·anthology title-only pre-filter 방식은 키워드가 한쪽에만 등장하는 논문을 구조적으로 누락했다. recall 담당인 paper-hunter가 이런 miss를 내면 하류 triage에 도달조차 못하므로 복구 불가.",
         "when": "paper-hunt 코드 수정 시 이 규칙을 유지할 것. anthology에서 detail fetch가 비싸지만 `--max-per-venue-year` cap이 도달 즉시 짧아지는 안전장치가 있으므로 title pre-filter를 다시 넣지 않는다."
+      }
+    },
+    {
+      "id": "lesson:paper--2026-04-16-paper-summarizer-pdf-gemini-digest-2-stage",
+      "type": "Lesson",
+      "name": "paper-summarizer는 PDF를 안 읽는다 — Gemini digest 2-stage 파이프라인 전제",
+      "meta": {
+        "domain": "paper",
+        "date": "2026-04-16",
+        "rule": "paper-summarizer 에이전트의 Claude-side 비용을 'Claude가 PDF 전문을 읽는다'로 추정하지 말 것. 실제 파이프라인은 Stage 1(Gemini CLI gemini-3-pro-preview 1M 컨텍스트가 PDF → 2-5k word dense Markdown digest 생성, papers/digest/<slug>.digest.md 캐시) → Stage 2(Claude가 digest + raw.md 메타만 읽고 5-part Marp + Critical Reading + Known/Unknown + .kg.json 작성). Claude 편당 비용은 digest ~3k 토큰 + raw.md 메타 읽기 + Marp 템플릿 채우기 + Critical Reading 추론 ≈ 30-60초. 따라서 176편 규모도 2h 남짓에 가능하며, 오산으로 템플릿 배치 스크립트(a3_batch_summarize.py 같은)로 우회하는 건 abstract-only/heuristic 요약을 정상 venue 디렉토리에 쌓는 결과가 되어 하류 QA stage evidence chain을 오염시킨다.",
+        "why": "2026-04-16 diffusion-LLM 코퍼스 수집 중 orchestrator가 paper-summarizer를 'per-paper Claude ~3분 PDF 읽기'로 잘못 모델링해 176편 × 3분 = 8.75h라 불가능하다고 판단, 템플릿 배치 Python 드라이버 작성을 시도했다가 사용자 denial로 halt. 실제는 digest가 이미 Gemini가 만들어놓은 텍스트라 Claude는 PDF를 직접 안 읽고 digest만 소비한다. skill 문서(.claude/skills/paper-summarize/SKILL.md §17-52)와 agent 문서(.claude/agents/paper-summarizer.md §24-27)에 명시되어 있었으나 orchestrator가 이를 무시하고 time budget을 잘못 산정. 배치 템플릿으로 우회하면 Critical Reading 섹션이 digest의 'Limitations stated by authors'로 degrade돼 저자 claim/실제 증거 분리가 사라지고, 이후 QA answer-formulator가 잘못된 근거 체인을 작성하게 된다.",
+        "when": "A-3 paper-summarizer dispatch 전 orchestrator는 항상 (1) digest 캐시 존재율 확인(papers/digest/ 하위 카운트) (2) 남은 digest 생성은 별도 백그라운드 bash로 처리 (3) Claude 분량은 '편당 30-60초 × 편수'로 산정 (4) 한 agent turn에 한계가 있으면 paper-summarizer를 accepted 리스트를 분할한 병렬 dispatch로 N개 동시 기동 (5) Gemini OOM 편은 skill의 pymupdf fallback 경로가 자동 처리하므로 배치 드라이버로 heuristic 템플릿을 쌓지 말 것. paper-summarize skill §60-67 fallback 경로만 사용 허용. 새로운 Gemini heap 이슈(NODE_OPTIONS) 조정은 scripts/gemini_digest.py 레벨에서만 한다."
       }
     }
   ],

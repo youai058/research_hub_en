@@ -8,7 +8,7 @@
 
 이 워크스페이스는 **일반 AI/NLP 연구 루프**를 위한 독립 하네스다. 기존 LLDM 공격 연구(`/home/irteam/sw/`)와 **완전히 분리**되어 있다. 루프의 목적은 **사용자가 준 연구 질문에 대한 근거 기반 직접 답변을 만들고, 그 답변의 각 근거(Evidence)를 실험으로 검증하는 것**이다. 새 연구 주제나 가설을 divergent하게 생성하지 않는다. 다음 5단계를 반복한다.
 
-1. **논문 서치**: 주요 AI/NLP venue 6개(NeurIPS / AAAI / ICLR / ICML / ACL / EMNLP)를 **기본 수집 대상**으로 스캔하고 accepted 논문을 `papers/<Venue>/<Year>/<slug>.md` (예: `ICLR/2025`, `ICML/2025`)에 저장한다. 기본 동작은 whitelist 6개에 한정되며, workshop·ACL Findings·arXiv preprint 등 non-whitelist 논문과 arXiv 키워드 수집은 **사용자가 `/research-papers <topic> --include-arxiv` 플래그를 명시했을 때만 opt-in**으로 `papers/etc/<Year>/<slug>.md`에 함께 수집된다 (연도만 하위 계층, 평탄 구조; frontmatter `venue`는 원문, `venue_class: "etc"`). 플래그가 없으면 openreview/anthology 스캔 중 etc 분류된 결과는 drop하고 arXiv 소스는 실행조차 하지 않는다. **리스팅(paper-hunter)은 abstract·API 메타만으로 판단·분류·dedup해도 되며, venue 분류 불가 / near-duplicate 의심 / relevance 애매 같은 경우에만 PDF 첫 2–3페이지를 optional하게 fetch한다.** 실제 5-part 요약(paper-summarizer)은 **반드시 full-text PDF**를 pymupdf로 파싱해 Marp 포맷으로 작성하고 RAG 벡터 스토어에 인덱싱한다. `papers/arXiv/`·`papers/OpenReview/`·`papers/preprint/`·`papers/workshop/`·`papers/findings/` 같은 소스·속성 기반 디렉토리는 만들지 않는다.
+1. **논문 서치**: 주요 AI/NLP venue 6개(NeurIPS / AAAI / ICLR / ICML / ACL / EMNLP)를 **기본 수집 대상**으로 스캔한다. A-1 paper-hunter는 accepted 논문의 **메타데이터·abstract**를 `papers/metadata/<Venue>/<Year>/<slug>.raw.md` (예: `ICLR/2025`, `ICML/2025`)에 수집하고, 이후 A-3 paper-summarizer가 **full-text PDF 기반 adaptive Marp 요약**을 `papers/marp-summary/<Venue>/<Year>/<slug>.md`로 생성한다. 기본 동작은 whitelist 6개에 한정되며, workshop·ACL Findings·arXiv preprint 등 non-whitelist 논문과 arXiv 키워드 수집은 **사용자가 `/research-papers <topic> --include-arxiv` 플래그를 명시했을 때만 opt-in**으로 hunter 단계는 `papers/metadata/etc/<Year>/<slug>.raw.md`에, summarizer 단계는 `papers/marp-summary/etc/<Year>/<slug>.md`에 함께 수집된다 (연도만 하위 계층, 평탄 구조; frontmatter `venue`는 원문, `venue_class: "etc"`). 플래그가 없으면 openreview/anthology 스캔 중 etc 분류된 결과는 drop하고 arXiv 소스는 실행조차 하지 않는다. **리스팅(paper-hunter)은 abstract·API 메타만으로 판단·분류·dedup해도 되며, venue 분류 불가 / near-duplicate 의심 / relevance 애매 같은 경우에만 PDF 첫 2–3페이지를 optional하게 fetch한다.** 실제 5-part 요약(paper-summarizer)은 **반드시 full-text PDF**를 pymupdf로 파싱해 Marp 포맷으로 작성하고 RAG 벡터 스토어에 인덱싱한다. `papers/arXiv/`·`papers/OpenReview/`·`papers/preprint/`·`papers/workshop/`·`papers/findings/` 같은 소스·속성 기반 디렉토리는 만들지 않는다.
 2. **답변 formulate + 근거 비판**: 사용자 질문을 seed_question으로 받아 hybrid_query(RAG+KG)로 근거를 수집. answer-formulator가 Direct Answer(한 문단, 구체 수치·조건) + Evidence Chain(3-7개, 각 grounding/confidence/verifiability/verification_sketch)을 작성. **Divergent ideation 금지** — 새 가설·방법·데이터셋을 발명하지 않음. 이후 critic이 4축(Grounding Validity / Support Strength / Counter-Evidence / Verifiability)으로 각 Evidence를 독립 비판하며 Grounding≥3 AND Support≥3 AND Verifiability≥3를 통과해야 한다.
 3. **Evidence verification 실험 계획**: 통과한 각 Evidence point에 대해 **1:1로 검증 실험**을 설계. PLAN.md의 각 cell = 정확히 하나의 Evidence. IV/DV/control/baseline/ablation과 **Expected Under(evidence 참) / If Wrong(반박)** 수치 범위를 사전 명시하여 post-hoc 해석을 원천 차단. weak-flagged Evidence는 우선 배치.
 4. **실험 코드 구현**: 외부 논문 코드 통합, `experiments/<slug>/code/`에 최소 침습 통합. `IMPL_MAP.md`로 **Evidence ↔ Experiment ↔ Code 3-way 매핑** 추적. 각 Experiment에 `decide_verdict()` 함수가 PLAN의 Expected Under/If Wrong 수치를 그대로 사용해 CONFIRMED/REFUTED/INCONCLUSIVE 반환. implementation-verifier가 incremental QA.
@@ -77,7 +77,7 @@
 
 | Stage | 커맨드 | Phase A (Planning) | Phase C (Execution — STAGE_SUBPHASES) | 산출물 |
 |---|---|---|---|---|
-| `papers` | `/research-papers <topic>` | paper-hunter가 `research/plans/papers/<slug>/v<N>/PLAN.md` 작성 | A-1 paper-hunter → A-2 paper-triage → A-3 paper-summarizer → A-4 rag-curator | `papers/<V>/<Y>/*.md` + `research/reports/papers/<slug>/v<N>/{Report.md, Report.slides.md}` |
+| `papers` | `/research-papers <topic>` | paper-hunter가 `research/plans/papers/<slug>/v<N>/PLAN.md` 작성 | A-1 paper-hunter → A-2 paper-triage → A-3 paper-summarizer → A-4 rag-curator | `papers/marp-summary/<V>/<Y>/*.md` + `research/reports/papers/<slug>/v<N>/{Report.md, Report.slides.md}` |
 | `qa` | `/research-qa <slug> <question>` | answer-formulator가 `research/plans/qa/<slug>/v<N>/PLAN.md` 작성 (hybrid_query dry-run, 답변 본문 금지) | B-1 answer-formulator (Direct Answer + Evidence Chain 3–7) → B-2 critic (+ codex-reviewer 병렬 4축) | `research/answers/`·`research/critiques/` + `research/reports/qa/<slug>/v<N>/{Report.md, Report.slides.md}` |
 | `experiments` | `/research-experiments <slug>` | `experiment-design` 스킬 내 experiment-planner + critic이 `research/plans/experiments/<slug>/v<N>/PLAN.md` 작성 (Evidence↔Experiment 1:1, Expected Under / If Wrong 수치) | `experiment-impl`: E-1 code-implementer → E-2 implementation-verifier → E-3 codex-reviewer → smoke test; 후속 `experiment-report` 스킬 | `experiments/<slug>/{code,configs,run.sh,IMPL_MAP.md}` + `research/reports/experiments/<slug>/v<N>/{Report.md, Report.slides.md}` |
 | `analyze` | `/research-analyze <slug>` | results-analyst가 `research/plans/analyze/<slug>/v<N>/PLAN.md` 작성 (verdict 규칙·REFUTED 4-way 분류·revision seed 포맷) | F-1 results-analyst → F-2 codex-reviewer | `research/diagnoses/<slug>.md` + `research/reports/analyze/<slug>/v<N>/{Report.md, Report.slides.md}` |
@@ -121,7 +121,7 @@
 
 ### RAG Stack
 - **Embedding**: BAAI/bge-m3 (sentence-transformers)
-- **Store**: ChromaDB PersistentClient at `papers/rag/chroma`
+- **Store**: ChromaDB PersistentClient at `papers/vector_db/chroma`
 - **Chunking**: 섹션 단위 + 수식/표 블록 보존. chunk_size ~1200 tokens.
 - **증분 갱신**: `manifest.json`에 파일 경로 → SHA256 저장. rag-curator가 변경된 것만 upsert.
 - **쿼리 인터페이스**: `python3 .claude/skills/paper-rag/scripts/query.py "<question>" --k 5`
@@ -131,14 +131,33 @@
 - **OpenReview**: `openreview-py`로 venue ID 기반 논문 목록
 - 두 소스는 정규화된 제목 + arXiv ID로 dedup
 
-### 5-part Summary Template
-모든 논문 요약 파일은 다음 구조를 가진다 (상세는 `paper-summarize` 스킬):
-1. 주요 주장 (Claims)
-2. 뒷받침 실험 (Experiments)
-3. 방법론 (Methodology)
-4. 실험 세팅 (Setup)
-5. 실험 결과 (Results)
-추가: Critical Reading (저자 주장 vs 실제 증거), Known/Unknown
+### Adaptive Summary Template
+모든 논문 요약 파일은 **논문별 adaptive outline**을 가진다 (상세는 `paper-summarize` 스킬). 고정 6-part 템플릿은 폐기됨 (2026-04-16).
+
+**공통 구조**:
+- Marp frontmatter (`marp: true`, PPT 호환 유지)
+- 최상단 `<!-- PLANNING: ... -->` 주석 블록 (planning-first 검증용 — **SECTIONS + IMAGE_SOURCES 서브블록 모두** 가진다)
+- H1 lead 슬라이드 (title, authors, venue, links)
+
+**Planning-first 워크플로우**: 본문 작성 전에 PLANNING 블록을 먼저 설계한다. PLANNING은 (1) SECTIONS 서브블록에서 모든 섹션 번호·제목·이미지 배치(`[Figure N]` 또는 `[no image]`)를 upfront로 결정, (2) IMAGE_SOURCES 서브블록에서 SECTIONS에 등장한 각 figure의 경로와 한 줄 용도를 기록한다. 이후 본문은 PLANNING 그대로 구현하며 도중 재배치 금지.
+
+**필수 앵커 4개 (제목 변형 허용, 순서 고정)**:
+1. **TL;DR** — H1 lead 직후 첫 콘텐츠 슬라이드, `> ` blockquote 한두 문장
+2. **Method** — 핵심 idea + 수식 verbatim + pseudocode/figure 참조
+3. **Result** — 수치 표는 반드시 Markdown 표 (이미지 스크린샷 금지)
+4. **Critical Reading** — 논문의 부족한 부분 3~5 bullet (full-text 기반)
+
+**앵커 사이 자유 섹션** — 논문 흐름에 맞게 0개 이상: Motivation / Observation / Experiments Setup / Analysis / Discussion / Conclusion 또는 narrative 한국어 H2 ("왜 이 문제가 어려운가", "핵심 아이디어는 무엇인가").
+
+**이미지 규칙**:
+- **섹션당 이미지 ≤1장**. Method / Motivation / Observation / Analysis 계열에 주로 배치.
+- Result / TL;DR / Critical Reading / Lead는 기본 `[no image]` — 결과 수치는 figure가 있어도 별도 Markdown 표로 옮긴다.
+- 사용 가능한 figure는 digest frontmatter의 `figures:` YAML 리스트(`{label, path, section_hint, reason}`)에만 존재하는 것들이며, 파일명 규칙은 `.figure_cache/<slug>__fig<N>.png`.
+- digest `figures: []`(빈 리스트)이면 PLANNING의 모든 섹션을 `[no image]`로 두고 이미지 삽입 생략.
+
+**Keywords (RAG용)**: 선택 — 쓸 때만 말미에 abstract 기반 10~15개.
+
+**문체**: 한영 code-switching + 음슴체(~임, ~함, ~됨). 한국어 문장 + 영어 technical term. 어색한 완역 금지. 상세는 `paper-summarize` 스킬 "문체 규칙" 참조.
 
 ### Working Norms
 - 새 코드는 configurable path + CLI arg — 머신별 경로 하드코딩 금지

@@ -1,6 +1,6 @@
 ---
 name: rag-curator
-description: ChromaDB + bge-m3 기반 논문 RAG 벡터 스토어 관리 전문가. papers/**/*.md 변경을 감지하고 증분 임베딩·upsert하며, 다른 에이전트에 쿼리 인터페이스를 제공한다. "RAG 갱신", "벡터 인덱싱", "논문 검색", "chroma 쿼리", "임베딩 업데이트" 관련 요청 시 호출된다.
+description: ChromaDB + bge-m3 기반 논문 RAG 벡터 스토어 관리 전문가. papers/marp-summary/**/*.md 변경을 감지하고 증분 임베딩·upsert하며, 다른 에이전트에 쿼리 인터페이스를 제공한다. "RAG 갱신", "벡터 인덱싱", "논문 검색", "chroma 쿼리", "임베딩 업데이트" 관련 요청 시 호출된다.
 model: opus
 ---
 
@@ -13,7 +13,7 @@ model: opus
 - `docs/lessons.md` — 전역
 - `docs/lessons-paper.md` — 도메인 (hunt/summarize/RAG)
 
-또한 `papers/rag/.stale` 플래그 확인 후 필요 시 재인덱싱. 새 실패 패턴(chunking 실패, embedding OOM 등) 발견 시 `/research-lesson paper "<title>"`로 append.
+또한 `papers/vector_db/rag.stale` 플래그 확인 후 필요 시 재인덱싱. 새 실패 패턴(chunking 실패, embedding OOM 등) 발견 시 `/research-lesson paper "<title>"`로 append.
 
 ---
 
@@ -21,7 +21,7 @@ ChromaDB 벡터 스토어의 무결성을 유지하고 증분 갱신하는 **데
 
 ## 핵심 역할
 
-1. `papers/**/*.md`를 해시(SHA256) 기반으로 변경 감지
+1. `papers/marp-summary/**/*.md`를 해시(SHA256) 기반으로 변경 감지
 2. 변경된 파일만 chunking → bge-m3 임베딩 → ChromaDB upsert
 3. `manifest.json`에 파일 해시·mtime·chunk 개수 기록
 4. 다른 에이전트의 쿼리 요청을 `query.py`로 처리
@@ -39,9 +39,9 @@ ChromaDB 벡터 스토어의 무결성을 유지하고 증분 갱신하는 **데
   - `papers/` 디렉토리 상태 (manifest와 비교)
   - 다른 에이전트의 쿼리: `{query, k, filter?}`
 - **출력**:
-  - `papers/rag/chroma/` 갱신
-  - `papers/rag/manifest.json` 갱신
-  - `papers/rag/chunks.jsonl` 로그 추가 (chunk_id, source, section, text_preview)
+  - `papers/vector_db/chroma/` 갱신
+  - `papers/vector_db/manifest.json` 갱신
+  - `papers/vector_db/chunks.jsonl` 로그 추가 (chunk_id, source, section, text_preview)
   - 쿼리 응답: top-k docs with metadata
 
 ## 팀 통신 프로토콜

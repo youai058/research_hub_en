@@ -57,7 +57,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--root", default="/home/irteam/sw/research_hub",
                     help="Project root (abs path)")
-    ap.add_argument("--glob", default="papers/**/*.raw.md",
+    ap.add_argument("--glob", default="papers/metadata/**/*.raw.md",
                     help="Glob pattern relative to --root")
     ap.add_argument("--chunk", type=int, default=0,
                     help="Emit one JSON array per N items (0=single array)")

@@ -42,16 +42,19 @@ from pydantic import ValidationError  # noqa: E402
 KST = timezone(timedelta(hours=9))
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
-KG_DIR = REPO_ROOT / "papers" / "kg"
-DB_PATH = KG_DIR / "kg.sqlite"
-MANIFEST_PATH = KG_DIR / "manifest.json"
-LOG_PATH = KG_DIR / "extraction_log.jsonl"
-REJECTED_PATH = KG_DIR / "rejected.jsonl"
-STALE_PATH = KG_DIR / ".stale"
+VDB_DIR = REPO_ROOT / "papers" / "vector_db"
+DB_PATH = VDB_DIR / "kg.sqlite"
+MANIFEST_PATH = VDB_DIR / "kg-manifest.json"
+LOG_PATH = VDB_DIR / "extraction_log.jsonl"
+REJECTED_PATH = VDB_DIR / "rejected.jsonl"
+STALE_PATH = VDB_DIR / "kg.stale"
+KG_STAGING_DIR = VDB_DIR / "kg-staging"
 
-# Directories scanned for `*.kg.json` sibling files.
+# Directories scanned for `*.kg.json` files.
+# Paper KG extractions now live in a flat staging dir; research/experiments/docs
+# may still produce .kg.json sibling files for non-paper entities.
 SCAN_ROOTS = (
-    REPO_ROOT / "papers",
+    KG_STAGING_DIR,
     REPO_ROOT / "research",
     REPO_ROOT / "experiments",
     REPO_ROOT / "docs",
@@ -92,13 +95,7 @@ def collect_kg_files() -> list[Path]:
     for root in SCAN_ROOTS:
         if not root.exists():
             continue
-        # Exclude KG_DIR itself to avoid self-recursion.
         for p in sorted(root.rglob("*.kg.json")):
-            try:
-                p.relative_to(KG_DIR)
-                continue  # inside papers/kg/ — skip
-            except ValueError:
-                pass
             # Exclude anything under a `_fixture/` subtree. These are
             # intentional test samples (including the kg-reject invalid
             # fixture). Ingesting them would either append a rejection every
@@ -318,7 +315,8 @@ def cmd_run(
     dry_run: bool = False,
     single_file: str | None = None,
 ) -> dict:
-    KG_DIR.mkdir(parents=True, exist_ok=True)
+    VDB_DIR.mkdir(parents=True, exist_ok=True)
+    KG_STAGING_DIR.mkdir(parents=True, exist_ok=True)
     manifest = load_manifest()
 
     if rebuild:

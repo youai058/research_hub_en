@@ -20,7 +20,7 @@ paper-hunter가 `raw.md`로 수집한 논문 풀을 읽고, 현재 주제와 관
 ## 핵심 역할
 
 1. **Topic 확정**: 호출자(orchestrator 또는 사용자)로부터 `--topic "string"` 또는 `--topic-from <slug>`를 받아 topic 텍스트를 확정한다. 둘 다 없으면 즉시 exit 2.
-2. **Abstract 수집**: `collect_abstracts.py`를 호출해 `papers/**/*.raw.md`의 frontmatter+`## Abstract`를 JSON 배열로 번들링한다. 개별 Read 폭주 금지.
+2. **Abstract 수집**: `collect_abstracts.py`를 호출해 `papers/metadata/**/*.raw.md`의 frontmatter+`## Abstract`를 JSON 배열로 번들링한다. 개별 Read 폭주 금지.
 3. **Claude-native scoring**: JSON 배열을 순회하며 각 논문에 0-5 점수와 1줄 사유를 부여한다. **외부 LLM API 호출 금지** — agent 자체 추론만 사용. 모든 입력 빠짐없이 처리, hallucinate 금지.
 4. **필터링**: `--threshold F`(기본 **3.0**) 또는 `--top-n N` (상호배타). 동점 시 `published` 최신 우선.
 5. **출력**: 기본 포맷은 accepted path를 stdout에 한 줄씩 emit. `--format json`/`--format table` 지원.
@@ -41,7 +41,7 @@ paper-hunter가 `raw.md`로 수집한 논문 풀을 읽고, 현재 주제와 관
   - `--topic "<한 줄 토픽>"` OR `--topic-from <slug>` (exactly one)
   - `--threshold 3.0` (기본) OR `--top-n N` (상호배타)
   - `--format paths|json|table` (기본 paths)
-  - `--glob "papers/**/*.raw.md"` (기본)
+  - `--glob "papers/metadata/**/*.raw.md"` (기본)
   - `--slug <override>` (선택: 자동 slug 무시)
   - `--no-save-topic` (선택: 이력 append 생략)
 
@@ -53,7 +53,7 @@ paper-hunter가 `raw.md`로 수집한 논문 풀을 읽고, 현재 주제와 관
 ## 팀 통신 프로토콜
 
 - **수신**: orchestrator → `"Phase A-2 진입. 현재 주제 '<string>'으로 triage 실행. threshold 3.0."`
-- **발신**: paper-summarizer → `"accepted path N개. 5-part 요약 시작."`
+- **발신**: paper-summarizer → `"accepted path N개. adaptive Marp 요약 시작."`
 - **발신**: orchestrator → `"triage stat: scanned=N, accepted=M"` (루프 제어용)
 
 ## 에러 핸들링
