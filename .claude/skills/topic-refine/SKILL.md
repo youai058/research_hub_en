@@ -1,6 +1,6 @@
 ---
 name: topic-refine
-description: "Socratic interview that turns a vague user topic into a structured `topic.json` spec before `/research-papers` Phase A. 3 perspectives (Scope Definer / Keyword Strategist / Triage Sharpener), 2–5 adaptive rounds, floor-rule termination at clarity ≥0.7 on all 3 dimensions. Trigger: '주제 구체화', 'refine topic', '인터뷰'."
+description: "Socratic interview that turns a vague user topic into a structured `topic.json` spec before `/research-papers` Phase A. 3 perspectives (Scope Definer / Keyword Strategist / Triage Sharpener), 2–7 adaptive turns (one question per turn), floor-rule termination at clarity ≥0.7 on all 3 dimensions. Trigger: '주제 구체화', 'refine topic', '인터뷰'."
 ---
 
 # Topic Refine Skill
@@ -16,25 +16,45 @@ Invoked by the main session (NOT a subagent — requires TUI interactivity) at t
 
 ## The 3-Perspective Panel
 
-Every round, Claude chooses 1–3 of these perspectives to ask from. Later rounds typically use fewer (narrowing).
+Every turn, Claude chooses exactly **1** of these perspectives to ask from — the one most valuable given the current clarity scores.
 
 | Perspective | Probes | Sample question stems |
 |---|---|---|
-| **Scope Definer** | venues, years, `include_arxiv` | "Whitelist 6 venue 전부 대상? NLP vs ML conference 우선이 있나요?" · "연도 범위는 기본 3년 버킷 [today, -1, -2]? 더 과거까지?" · "arXiv preprint까지 포함할까요 (`--include-arxiv`)?" |
-| **Keyword Strategist** | which 2 axes, 3-variant expansion | "첫 번째 축은 `<분야명>`으로 보임. 두 번째 축 필요? (예: evaluation / training dynamics / sampling)" · "`<term>`의 약어/풀네임/어순변형 3종 중 누락된 것?" |
-| **Triage Sharpener** | core question, include/exclude, signal methods | "이 분야 논문 중 어떤 성격을 원하나요 — survey? 새 method? analysis?" · "명확히 제외할 영역? (예: image diffusion은 text가 아니라 out)" · "Triage가 놓치면 안 되는 landmark method 3–5개는?" |
+| **Scope Definer** | venues, years, `include_arxiv` | **Bounded**: "Venue 범위: (A) whitelist 6개 전체 (B) NLP 우선 (ACL/EMNLP) (C) ML 우선 (ICML/NeurIPS/ICLR) (D) 직접 지정" · "연도 범위: (A) 최근 3년 (B) 최근 5년 (C) 직접 지정" · "arXiv preprint 포함: (A) 아니오 — whitelist venue만 (B) 예 (--include-arxiv)" |
+| **Keyword Strategist** | which 2 axes, 3-variant expansion | **Open-ended**: "첫 번째 축은 `<분야명>`으로 보임. 두 번째 축 필요? (예: evaluation / training dynamics / sampling)" · "`<term>`의 약어/풀네임/어순변형 3종 중 누락된 것?" |
+| **Triage Sharpener** | core question, include/exclude, signal methods | **Bounded**: "논문 성격: (A) 새 method (B) survey/analysis (C) 둘 다 (D) 직접 지정" · **Open-ended**: "명확히 제외할 영역? (예: image diffusion은 text가 아니라 out)" · "Triage가 놓치면 안 되는 landmark method 3–5개는?" |
 
-## Round Flow
+## Question Presentation Rules
+
+Each question falls into one of two modes:
+
+| Mode | When | Format |
+|---|---|---|
+| **Bounded choice** | 답이 열거 가능한 유한 집합 (venue 선택, yes/no, 범위 선택, 스타일 선택 등) | `(A)` `(B)` `(C)` ... 라벨 + 한 줄 설명. 마지막에 "또는 자유 텍스트로 답변 가능" 부기 |
+| **Open-ended** | 사용자 자유 입력 필요 (키워드 제안, 제외 영역 서술, landmark method 나열 등) | 라벨 없이 질문만 제시. 필요시 예시를 `예: ...` 형태로 추가 |
+
+**Formatting contract:**
+- 선택지 라벨은 반드시 `(A)`, `(B)`, `(C)`, ... 알파벳 괄호.
+- 선택지 개수: 2–5개.
+- 사용자가 라벨만("B"), 괄호 포함("(B)"), 또는 자유 텍스트로 답해도 모두 수용.
+- 한 메시지에 질문은 항상 **1개만**. bounded 또는 open-ended 중 하나.
+
+## Turn Flow
+
+**One question per turn.** Claude picks the single most valuable question from the 3 perspectives given the current clarity scores, and presents it alone in one message.
 
 ```
-Round N:
-  1. Claude picks 1–3 questions (one per chosen perspective).
-  2. Presents them in ONE message, one question per paragraph,
-     each labeled with the perspective name.
-  3. User answers in free text.
+Turn N (of max 7):
+  1. Claude picks the SINGLE most important question
+     from the 3 perspectives (Scope / Keywords / Triage).
+  2. Presents it in ONE message — one question only.
+     Labeled with the perspective name.
+     — Bounded: (A)/(B)/... labeled options.
+     — Open-ended: no labels, free-text expected.
+  3. User answers in free text or by label (e.g. "B").
   4. Claude updates its working topic.json draft internally.
   5. Claude scores clarity on 3 dimensions (scope / triage / keywords).
-  6. Claude prints: [round N/5] scope=X.XX triage=X.XX keywords=X.XX — MILESTONE
+  6. Claude prints: [turn N/7] scope=X.XX triage=X.XX keywords=X.XX — MILESTONE
   7. Claude decides: continue or terminate (see Termination).
 ```
 
@@ -53,17 +73,17 @@ Each dimension is 0.0–1.0. Claude judges based on the current topic.json draft
 ## Termination (any ONE triggers)
 
 - **Floor**: all 3 dimension scores ≥ 0.7 → `termination_reason: "floor"`
-- **Plateau**: 2 consecutive rounds with delta < 0.05 on every dimension → `termination_reason: "plateau"`
-- **Ceiling**: round 5 completed → `termination_reason: "ceiling"`
+- **Plateau**: 2 consecutive turns with delta < 0.05 on every dimension → `termination_reason: "plateau"`
+- **Ceiling**: turn 7 completed → `termination_reason: "ceiling"`
 - **User early-exit**: user types `proceed` / `진행` / `done` / `이대로` → `termination_reason: "user_early_exit"`
 
-**Minimum 2 rounds** unless user early-exits. The escape phrases above are **interview-local** — they do not advance the harness Phase B→C gate (that's a separate later prompt after PLAN.md).
+**Minimum 2 turns** unless user early-exits. The escape phrases above are **interview-local** — they do not advance the harness Phase B→C gate (that's a separate later prompt after PLAN.md).
 
 ## Milestones (display only)
 
 | Milestone | Condition |
 |---|---|
-| INITIAL | round 1 starting |
+| INITIAL | turn 1 starting |
 | PROGRESS | at least one dimension ≥ 0.5 |
 | REFINED | all dimensions ≥ 0.5 |
 | READY | termination criteria met |
@@ -96,8 +116,8 @@ keyword_groups (≤2 lists of strings),
 scope{venues, years, include_arxiv},
 clarity_scores{scope, triage, keywords},   # each 0.0–1.0
 termination_reason ∈ {floor, plateau, ceiling, user_early_exit},
-interview_rounds (int),
-interview_log (array of {round, perspectives_used, questions, user_answer, scores_after})
+interview_rounds (int),                # counts turns (1 question each)
+interview_log (array of {round, perspectives_used, questions, user_answer, scores_after})  # each entry = 1 turn
 ```
 
 ## Failure Modes
@@ -108,10 +128,11 @@ interview_log (array of {round, perspectives_used, questions, user_answer, score
 
 ## Checklist
 
-- [ ] Minimum 2 rounds unless user early-exits
+- [ ] **One question per turn** — never present multiple questions in one message
+- [ ] Minimum 2 turns unless user early-exits
 - [ ] Never propose new research directions
-- [ ] Each round's questions are labeled by perspective
-- [ ] `[round N/5] scope=X triage=X keywords=X — MILESTONE` printed between rounds
+- [ ] Each turn's question is labeled by perspective; bounded questions use `(A)`/`(B)` labels
+- [ ] `[turn N/7] scope=X triage=X keywords=X — MILESTONE` printed between turns
 - [ ] Final topic.json passes `topic_spec.py validate` (exit 0)
 - [ ] File written to `research/topics/.pending.topic.json` (caller renames)
-- [ ] `interview_log` populated with all rounds
+- [ ] `interview_log` populated with all turns (each entry = 1 question)
