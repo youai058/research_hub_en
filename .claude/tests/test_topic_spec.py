@@ -129,6 +129,32 @@ def test_template_has_all_required_fields() -> None:
     assert tpl["raw_input"] == "foo"
 
 
+def test_report_builder_papers_body_includes_topic_json_fields() -> None:
+    """report_builder.py papers body renders refined_topic + clarity_scores."""
+    import importlib.util
+    rb_path = HERE.parent / "scripts" / "report_builder.py"
+    spec = importlib.util.spec_from_file_location("report_builder", rb_path)
+    rb = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(rb)
+
+    body = {
+        "refined_topic": "Diffusion LM 분석 논문 수집",
+        "clarity_scores": {"scope": 0.85, "triage": 0.80, "keywords": 0.75},
+        "interview_rounds": 3,
+        "termination_reason": "floor",
+        "collection_stats": {},
+        "triage": {},
+        "summarized": [],
+        "rag_delta": {},
+        "kg_delta": {},
+    }
+    out = rb._body_papers_md(body)
+    assert "Diffusion LM 분석 논문 수집" in out, "refined_topic not rendered"
+    assert "0.85" in out and "0.80" in out and "0.75" in out, "clarity_scores not rendered"
+    assert "floor" in out, "termination_reason not rendered"
+    assert "3" in out, "interview_rounds not rendered"
+
+
 def main() -> int:
     tests = [
         test_validate_ok,
@@ -138,6 +164,7 @@ def main() -> int:
         test_get_nested_field,
         test_get_list_field_as_jsonl,
         test_template_has_all_required_fields,
+        test_report_builder_papers_body_includes_topic_json_fields,
     ]
     for t in tests:
         t()
