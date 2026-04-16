@@ -200,23 +200,24 @@ def _common_md(payload: dict[str, Any]) -> str:
 
 # ---------------------------------------------------------- stage bodies (md)
 
+def _fmt_score(v: Any) -> str:
+    """Format a clarity-score float as 2-decimal string, falling back to '?'."""
+    if isinstance(v, (int, float)):
+        return f"{v:.2f}"
+    return "?"
+
+
 def _body_papers_md(body: dict[str, Any]) -> str:
     out: list[str] = []
     # Topic Refinement (from research/topics/<slug>.topic.json)
     out.append("## Topic Refinement\n")
     refined = body.get("refined_topic")
-    cs = body.get("clarity_scores") or {}
-
-    def _fmt_score(v: Any) -> str:
-        if isinstance(v, (int, float)):
-            return f"{v:.2f}"
-        return "?"
-
+    clarity = body.get("clarity_scores") or {}
     if refined:
         out.append(f"- **Refined topic**: {refined}")
     out.append(
-        f"- **Clarity scores**: scope={_fmt_score(cs.get('scope'))} "
-        f"triage={_fmt_score(cs.get('triage'))} keywords={_fmt_score(cs.get('keywords'))}"
+        f"- **Clarity scores**: scope={_fmt_score(clarity.get('scope'))} "
+        f"triage={_fmt_score(clarity.get('triage'))} keywords={_fmt_score(clarity.get('keywords'))}"
     )
     out.append(f"- **Interview rounds**: {body.get('interview_rounds','?')}")
     out.append(f"- **Termination**: {body.get('termination_reason','?')}")
