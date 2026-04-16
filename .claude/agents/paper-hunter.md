@@ -37,19 +37,31 @@ model: opus
 ## 작업 원칙
 
 - **키워드는 "분야 이름"으로 구성**: 사용자 topic에서 분야를 추출해 canonical 용어로 변환하여 넓게 잡는다. 생소·신생 분야는 표기 변형 여러 개를 병기해 recall을 확보하고, narrow term은 triage(`--topic`)에 위임한다 (hunter=recall / triage=precision). 상세 규칙은 `paper-hunt` 스킬 "키워드 전략" 섹션 참조.
+- **키워드 3종 확장 (필수)**: 각 개념 키워드를 PLAN.md에 기재할 때, 반드시 **약어 / 풀네임 / 어순변형** 3종을 개념별 그룹으로 확장한다. 하나라도 빠지면 recall 누락이 발생한다. **keyword group은 최대 2개**까지만 작성한다. 토픽이 3개 이상 축으로 분해 가능하더라도, 가장 핵심적인 2개만 선택한다.
+  - **약어**: 대문자 축약형 (예: `LLDM`, `MDM`)
+  - **풀네임**: 공식 전체 명칭 (예: `Large Language Diffusion Model`, `Masked Diffusion Models`)
+  - **어순변형**: 단어 순서를 바꾼 자연스러운 표현 (예: `Diffusion LLM`, `Diffusion Language Model`, `Large Language Diffusion Model`)
+  - **PLAN.md 기재 포맷**: 개념별 `{ }` 그룹핑. 각 그룹 내 항목은 hunt.py `--keywords`에 개별 인자로 전달된다.
+    ```
+    keywords:
+      - group: {LLDM, Large Language Diffusion Model, Diffusion LLM, Diffusion Language Model}
+      - group: {LLM, Large Language Model}
+    ```
+  - 동의어·관련어 확장(예: `discrete diffusion`, `text diffusion`)은 이 단계에서 하지 않는다 — triage의 `--topic`으로 위임.
 - **`paper-hunt` 스킬을 반드시 사용**한다. API 호출 템플릿·dedup 로직·cursor 관리 규약이 모두 거기 있다.
 - **정식 진입점은 `scripts/hunt.py`**. 애드혹 `.tmp/hunter_run.py` 같은 파일을 새로 만들지 말고 다음 커맨드로 호출한다:
   ```bash
   # 기본 호출 (6-venue whitelist 전용, arXiv/etc 차단)
+  # 3종 확장된 키워드를 그룹 내 항목별로 개별 인자로 전달
   python3 /home/irteam/sw/research_hub/.claude/skills/paper-hunt/scripts/hunt.py \
       --venues-whitelist-all \
-      --keywords "<topic-term-1>" "<topic-term-2>" \
+      --keywords "LLDM" "Large Language Diffusion Model" "Diffusion LLM" "Diffusion Language Model" \
       --max-per-venue-year 200
 
   # opt-in: arXiv 키워드 소스 + etc 라우팅 허용 (PLAN.md의 include_arxiv=true일 때만)
   python3 /home/irteam/sw/research_hub/.claude/skills/paper-hunt/scripts/hunt.py \
       --venues-whitelist-all \
-      --keywords "<topic-term-1>" "<topic-term-2>" \
+      --keywords "LLDM" "Large Language Diffusion Model" "Diffusion LLM" "Diffusion Language Model" \
       --include-arxiv \
       --max-per-venue-year 200
   ```
