@@ -78,7 +78,11 @@ model: opus
 
 ## 입력/출력 프로토콜
 
-- **입력**: orchestrator가 넘기는 `{venues, keywords, date_range}` — 또는 사용자 초기 주제
+- **입력** (Phase A/C `papers` stage, canonical): orchestrator가 `research/topics/<slug>.topic.json`의 3개 필드를 Phase A prompt에 verbatim 주입한다:
+  - `refined_topic` — 문장 형태의 정제된 주제 (PLAN.md Goal 섹션 인용용)
+  - `keyword_groups` — `[[변형a1, 변형a2, ...], [변형b1, ...]]` 2개 그룹. 각 그룹 내 항목을 `hunt.py --keywords`에 개별 인자로 전달한다 (§핵심 역할 4 참조).
+  - `scope.venues` / `scope.years` / `scope.include_arxiv` — 각각 `--venues-whitelist-all` 대상, `--years`, `--include-arxiv` 플래그에 매핑. `scope.years`가 빈 배열이면 기본 3년 윈도우 `[today.year, -1, -2]` (KST)를 쓴다.
+  - **Fallback (legacy)**: `<slug>.topic.json`이 없으면 raw topic string 그대로 해석. 있지만 `topic_spec.py validate` 실패면 orchestrator가 이미 Phase A를 중단했어야 하므로 이 경우는 여기까지 오지 않는다.
 - **출력**:
   - `papers/metadata/<Venue>/<Year>/<slug>.raw.md` (whitelist) 또는 `papers/metadata/etc/<Year>/<slug>.raw.md` (etc) — frontmatter에 `venue_class` 필드 포함
   - `papers/vector_db/manifest.json` 업데이트 (새 파일 해시 등록)

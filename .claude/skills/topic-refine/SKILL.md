@@ -5,7 +5,7 @@ description: "Socratic interview that turns a vague user topic into a structured
 
 # Topic Refine Skill
 
-Invoked by the main session (NOT a subagent — requires TUI interactivity) at the very start of `/research-papers`. Transforms the raw `$ARGUMENTS` string into `research/topics/<slug>.topic.json` that paper-hunter, paper-triage, and orchestrator consume downstream.
+Invoked by the main session (NOT a subagent — requires TUI interactivity) at the very start of `/research-papers`. Transforms the raw `$ARGUMENTS` string into a staging spec at `research/topics/.pending.topic.json`, which the `/research-papers` command renames to `research/topics/<slug>.topic.json` after `stage-enter` allocates the slug. Downstream consumers (paper-hunter, paper-triage, orchestrator, report_builder) read the canonical `<slug>.topic.json` — this skill itself only ever writes the staging path.
 
 **Divergent ideation is forbidden.** This skill narrows existing intent; it does not propose new methods, datasets, or research directions.
 

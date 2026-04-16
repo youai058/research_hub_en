@@ -9,7 +9,12 @@ description: "논문 수집. 기본은 6 whitelist venue(NeurIPS·AAAI·ICLR·IC
 
 ## 입력 / 출력
 
-- **입력**: 키워드, source 선택(openreview/anthology/arxiv), 연도 버킷(`--years`), venue 지정 방식 (`--venues` 명시 / `--venues-whitelist-all` 6개 전체), arXiv opt-in(`--include-arxiv`), 상한 (`--max-per-query` / `--max-per-venue-year`), `--date-from`(backward compat)
+- **입력 (CLI)**: 키워드, source 선택(openreview/anthology/arxiv), 연도 버킷(`--years`), venue 지정 방식 (`--venues` 명시 / `--venues-whitelist-all` 6개 전체), arXiv opt-in(`--include-arxiv`), 상한 (`--max-per-query` / `--max-per-venue-year`), `--date-from`(backward compat)
+- **Upstream contract (`papers` stage만 해당)**: 이 CLI 플래그들은 orchestrator가 `research/topics/<slug>.topic.json`에서 읽어 Phase A prompt로 paper-hunter에 주입하는 3개 필드와 1:1로 매핑된다. 이 스킬 자체는 topic.json을 직접 읽지 않고, paper-hunter가 prompt 문맥을 받아 `hunt.py`에 flag로 풀어 호출한다.
+  - `refined_topic` → Goal 문장 (CLI 파라미터 아님, PLAN.md 인용용)
+  - `keyword_groups` (`[[a1, a2, ...], [b1, ...]]`, ≤2 그룹) → `--keywords` 인자 집합. 그룹 내 변형은 개별 인자로 펼친다.
+  - `scope.venues` → `--venues-whitelist-all` 또는 `--venues` 리스트, `scope.years` → `--years` (빈 배열이면 기본 3년 윈도우), `scope.include_arxiv` → `--include-arxiv` 유무
+  - Fallback: topic.json이 없으면 (legacy CLI 경로) paper-hunter가 raw topic string을 받아 약어/풀네임/어순변형 3종으로 직접 확장. topic.json이 있지만 `topic_spec.py validate` 실패면 orchestrator가 이미 Phase A를 중단했어야 하므로 이 경로는 실행되지 않는다.
 - **출력**: `papers/metadata/<Venue>/<Year>/<slug>.raw.md` (whitelist). `--include-arxiv` 있을 때만 `papers/metadata/etc/<Year>/<slug>.raw.md` (etc)도 생성. `papers/vector_db/manifest.json` cursor 갱신, year-bucket별 카운트 로그 + grand total (whitelist/etc/per-venue-year breakdown)
 
 ### 주요 CLI 플래그
