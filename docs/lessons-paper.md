@@ -41,7 +41,7 @@ Phase A-1 도메인: arXiv/OpenReview 수집, PDF 파싱, Marp 요약, ChromaDB 
 - **When to apply**: Phase A-1 paper-summarizer 활성 시 — PDF 파싱 실패 시 요약 보류하고 `papers/_rejected/`로 격리
 
 ## 2026-04-15 — paper-hunter 키워드는 분야 canonical 용어로 넓게 (recall-first)
-- **Rule**: 사용자 narrow topic(예: "LLDM denoising step 순서")을 그대로 `--keywords`로 넣지 말고, 축(모델족/문제/방법)을 분야 canonical 용어(예: `"LLDM" "large language diffusion"`)로 치환해 2-3개 축까지만 유지한다. narrow term은 paper-triage `--topic`에만 남긴다
+- **Rule**: 사용자 narrow topic(예: "LLDM denoising step 순서")을 그대로 `--keywords`로 넣지 말고, 축(모델족/문제/방법)을 분야 canonical 용어(예: `"LLDM" "large language diffusion"`)로 치환해 **최대 2개** 축까지만 유지한다. narrow term은 paper-triage `--topic`에만 남긴다
 - **Why**: hunter는 recall을, triage는 precision을 맡는 2단계 구조다. hunter가 narrow term으로 miss하면 triage에 도달할 후보 자체가 사라져 복구 불가. arXiv 쿼리는 metadata 검색이라 긴 문장·좁은 방법명은 0건 리콜이 흔하다
 - **When to apply**: orchestrator가 A-1 진입 시 topic → `--keywords` 변환을 수행. paper-hunter 호출 전 키워드가 문장형이거나 narrow method 이름이면 중단하고 분야 용어로 재구성. 규칙·예시 테이블은 `paper-hunt` 스킬 "키워드 전략" 섹션
 
