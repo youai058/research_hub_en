@@ -77,14 +77,14 @@
 
 | Stage | 커맨드 | Phase A (Planning) | Phase C (Execution — STAGE_SUBPHASES) | 산출물 |
 |---|---|---|---|---|
-| `papers` | `/research-papers <topic>` | paper-hunter가 `research/plans/papers/<slug>/v<N>/PLAN.md` 작성 | A-1 paper-hunter → A-2 paper-triage → A-3 paper-summarizer → A-4 rag-curator | `papers/marp-summary/<V>/<Y>/*.md` + `research/reports/papers/<slug>/v<N>/{Report.md, Report.slides.md}` |
+| `papers` | `/research-papers <topic>` | **Step 1.5 topic-refine (Socratic interview, main session)** → paper-hunter가 `research/plans/papers/<slug>/v<N>/PLAN.md` 작성 (topic.json 기반) | A-1 paper-hunter → A-2 paper-triage (`--topic-spec`) → A-3 paper-summarizer → A-4 rag-curator | `research/topics/<slug>.topic.json` + `papers/marp-summary/<V>/<Y>/*.md` + `research/reports/papers/<slug>/v<N>/{Report.md, Report.slides.md}` |
 | `qa` | `/research-qa <slug> <question>` | answer-formulator가 `research/plans/qa/<slug>/v<N>/PLAN.md` 작성 (hybrid_query dry-run, 답변 본문 금지) | B-1 answer-formulator (Direct Answer + Evidence Chain 3–7) → B-2 critic (+ codex-reviewer 병렬 4축) | `research/answers/`·`research/critiques/` + `research/reports/qa/<slug>/v<N>/{Report.md, Report.slides.md}` |
 | `experiments` | `/research-experiments <slug>` | `experiment-design` 스킬 내 experiment-planner + critic이 `research/plans/experiments/<slug>/v<N>/PLAN.md` 작성 (Evidence↔Experiment 1:1, Expected Under / If Wrong 수치) | `experiment-impl`: E-1 code-implementer → E-2 implementation-verifier → E-3 codex-reviewer → smoke test; 후속 `experiment-report` 스킬 | `experiments/<slug>/{code,configs,run.sh,IMPL_MAP.md}` + `research/reports/experiments/<slug>/v<N>/{Report.md, Report.slides.md}` |
 | `analyze` | `/research-analyze <slug>` | results-analyst가 `research/plans/analyze/<slug>/v<N>/PLAN.md` 작성 (verdict 규칙·REFUTED 4-way 분류·revision seed 포맷) | F-1 results-analyst → F-2 codex-reviewer | `research/diagnoses/<slug>.md` + `research/reports/analyze/<slug>/v<N>/{Report.md, Report.slides.md}` |
 
 ### 4.2 Phase A/B/C 프로토콜 (공통)
 
-- **Phase A**: 담당 에이전트가 PLAN.md만 작성. 부작용(논문 다운로드·답변 작성·코드 생성·실험 실행) 금지. 선행 산출물 부재 시 `⚠ Prerequisite Missing` 블록 삽입 (차단 아님, 경고만).
+- **Phase A**: 담당 에이전트가 PLAN.md만 작성. 부작용(논문 다운로드·답변 작성·코드 생성·실험 실행) 금지. 선행 산출물 부재 시 `⚠ Prerequisite Missing` 블록 삽입 (차단 아님, 경고만). **papers stage는 Phase A 앞에 Step 1.5 topic-refine interview가 실행되어 `research/topics/<slug>.topic.json`을 생성하며, PLAN.md는 이 스펙을 canonical 입력으로 쓴다.**
 - **Phase B**: 사용자 피드백 반영 → "이대로 구현해도 될까요?" 프롬프트. **명시 트리거 phrase 없이는 Phase C 진입 절대 불가**.
 - **Phase C**: `STAGE_SUBPHASES` 체인을 순차 blocking dispatch → 마지막 sub-phase 종료 후 Report 쌍 생성(`report_builder.py`) → `loop_state.py stage-complete` → `idle` 복귀. **다음 stage 권장 문구 출력 금지** (Decision #6).
 
