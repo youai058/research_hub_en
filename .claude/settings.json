@@ -1,4 +1,9 @@
 {
+  "env": {
+    "HF_HOME": "/home/irteam/.cache/huggingface",
+    "TOKENIZERS_PARALLELISM": "false",
+    "CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING": "1"
+  },
   "permissions": {
     "allow": [],
     "deny": [
@@ -13,16 +18,6 @@
     ],
     "defaultMode": "bypassPermissions"
   },
-  "skipDangerousModePermissionPrompt": true,
-  "env": {
-    "HF_HOME": "/home/irteam/.cache/huggingface",
-    "TOKENIZERS_PARALLELISM": "false",
-    "CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING": "1"
-  },
-  "statusLine": {
-    "type": "command",
-    "command": "python3 /home/irteam/sw/research_hub/.claude/scripts/loop_state.py status --short"
-  },
   "hooks": {
     "SessionStart": [
       {
@@ -32,6 +27,14 @@
             "command": "/home/irteam/sw/research_hub/.claude/hooks/session_start.sh"
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/irteam/sw/research_hub/.claude/hooks/inject_lessons.sh full"
+          }
+        ]
       }
     ],
     "UserPromptSubmit": [
@@ -39,7 +42,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/home/irteam/sw/research_hub/.claude/hooks/inject_lessons.sh"
+            "command": "/home/irteam/sw/research_hub/.claude/hooks/inject_lessons.sh titles"
           }
         ]
       }
@@ -93,5 +96,13 @@
         ]
       }
     ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "python3 /home/irteam/sw/research_hub/.claude/scripts/loop_state.py status --short"
+  },
+  "skipDangerousModePermissionPrompt": true,
+  "enabledPlugins": {
+    "superpowers@claude-plugins-official": true
   }
 }
