@@ -13,7 +13,7 @@ research_hub/
 │   └── lessons-analysis.md   결과 분석
 ├── .claude/
 │   ├── settings.json
-│   ├── agents/               14종 에이전트 정의 (+ harness-engineer, kg-curator, paper-triage, codex-reviewer)
+│   ├── agents/               14종 에이전트 정의 (+ harness-engineer, kg-curator, paper-triage, abstract-indexer, codex-reviewer)
 │   ├── skills/               22종 스킬 (research 12 + paper-kg + harness-* 7 + experiments 3: experiment-design/impl/report)
 │   ├── hooks/                8종 (session_start, mark_indices_stale, protect_chroma, protect_kg, protect_external_paths, guard_empty_rag advisory-only, phase_advance_check, inject_lessons)
 │   ├── scripts/              유틸리티 (loop_state.py v3 + report_builder.py + lesson.py)
@@ -70,7 +70,7 @@ Claude Code 하네스는 9종 configuration surface를 노출한다. research_hu
 | # | Surface | 경로 | 용도 |
 |---|---|---|---|
 | 1 | settings.json | `.claude/settings.json` | permissions, env, hooks 등록, statusLine |
-| 2 | agents | `.claude/agents/*.md` | 14종 페르소나 정의 (orchestrator, paper-hunter, paper-triage, codex-reviewer, ...) |
+| 2 | agents | `.claude/agents/*.md` | 14종 페르소나 정의 (paper-hunter, paper-triage, abstract-indexer, codex-reviewer, ...) |
 | 3 | skills | `.claude/skills/*/SKILL.md` | 22종 절차적 스킬 (progressive disclosure) |
 | 4 | commands | `.claude/commands/*.md` | 10종 slash command |
 | 5 | hooks | `.claude/hooks/*` + settings.json `hooks` | 8종 (아래 표 참조) |
@@ -118,8 +118,8 @@ Claude Code 하네스는 9종 configuration surface를 노출한다. research_hu
 
 | 에이전트 | 전문 영역 | 활성 Sub-phase | 소속 stage |
 |---------|---------|-----------|---|
-| orchestrator | stage-scoped Phase A/B/C 관리 | 전체 (stage-bounded) | — |
 | paper-hunter | venue API 스캔·수집 | A-1 | papers |
+| abstract-indexer | raw.md abstract를 bge-m3로 embed해 ChromaDB `abstracts` collection에 증분 upsert. A-2 triage의 dense-retrieval pre-filter용. | A-1.5 | papers |
 | paper-triage | abstract 기반 Claude-native 관련도 점수화(0-5) + accepted 필터 | A-2 | papers |
 | paper-summarizer | 5-part 비판적 요약 | A-3 | papers |
 | rag-curator | 임베딩·벡터 스토어 유지 | A-4 (주), 모든 sub-phase 끝단 선택 호출 | papers |
@@ -142,7 +142,7 @@ Claude Code 하네스는 9종 configuration surface를 노출한다. research_hu
 | `experiments` | (C-1 satisfied in Phase A) → E-1 → E-2 → E-3 + experiment-report skill | `experiments/<slug>/`, `research/reports/experiments/<slug>/v<N>/` |
 | `analyze` | F-1 → F-2 | `research/diagnoses/`, `research/reports/analyze/<slug>/v<N>/` |
 
-`STAGE_SUBPHASES`는 `loop_state.py` · `orchestrator.md` · `orchestrate/SKILL.md` 3곳에 동일 정의. **Stage 간 auto-chain 금지**.
+`STAGE_SUBPHASES`는 `loop_state.py` 단일 SSOT로 정의됨. **Stage 간 auto-chain 금지**.
 
 ## Versioning
 
@@ -155,4 +155,11 @@ Claude Code 하네스는 9종 configuration surface를 노출한다. research_hu
 
 상세는 CLAUDE.md §4.3 + `.claude/scripts/loop_state.py` TRIGGER_WHITELIST 참조 (SSOT 2곳, Dedup Stage 1 lesson 2026-04-15).
 
-자세한 워크플로우는 `orchestrate` 스킬 (`.claude/skills/orchestrate/SKILL.md` + `references/stage-gate.md` + `references/report-templates.md`)에 정의되어 있다.
+자세한 워크플로우는 각 stage slash command (`.claude/commands/research-*.md`)와 `CLAUDE.md §4`에 정의되어 있다.
+
+## Dispatch rules (2026-04-16 refactor)
+
+- Phase A PLAN.md writers are the four specialist planners (`paper-hunter`, `answer-formulator`, `experiment-planner`, `results-analyst`) dispatched by the stage slash command with `mode=plan-only` and `run_in_background: true`.
+- Phase C sub-phases are owned by the stage slash command, which dispatches each sub-phase as a separate `Agent(..., run_in_background=true)` call and verifies the artifact between dispatches.
+- The only main-session (foreground) step is the `topic-refine` skill in `/research-papers`, which is interactive by nature.
+- No agent delegates to another agent. Orchestration is a main-session responsibility.

@@ -27,7 +27,7 @@
 - 외부 API 유료 호출
 
 ### 계획 우선
-- 3단계 이상 구조적 결정 → Phase A부터. orchestrator가 관리.
+- 3단계 이상 구조적 결정 → Phase A부터. 담당 에이전트(mode=plan-only)가 관리.
 - 잘못되면 즉시 멈추고 재계획. 밀어붙이지 않음.
 
 ### 완료 전 검증
@@ -71,22 +71,22 @@
 
 ## 4. Standard Workflow (4 stage × 3 phase × sub-phase)
 
-모든 비자명 작업은 **stage 커맨드** 단위로 진행된다. Orchestrator는 한 번 dispatch에 하나의 stage에 대한 Phase A/B/C 전체를 관리하며, **stage 간 auto-chain·autonomous 분기·다음 커맨드 suggestion은 일체 금지**다. 재실행은 `research/plans/<stage>/<slug>/v<N>/`·`research/reports/<stage>/<slug>/v<N>/` 디렉토리로 버전 누적된다.
+모든 비자명 작업은 **stage 커맨드** 단위로 진행된다. 각 stage 커맨드가 Phase A/B/C 전체를 직접 관리하며, **stage 간 auto-chain·autonomous 분기·다음 커맨드 suggestion은 일체 금지**다. 재실행은 `research/plans/<stage>/<slug>/v<N>/`·`research/reports/<stage>/<slug>/v<N>/` 디렉토리로 버전 누적된다.
 
 ### 4.1 Stage × Phase 매핑
 
 | Stage | 커맨드 | Phase A (Planning) | Phase C (Execution — STAGE_SUBPHASES) | 산출물 |
 |---|---|---|---|---|
-| `papers` | `/research-papers <topic>` | **Step 1.5 topic-refine (Socratic interview, main session)** → paper-hunter가 `research/plans/papers/<slug>/v<N>/PLAN.md` 작성 (topic.json 기반) | A-1 paper-hunter → A-2 paper-triage (`--topic-spec`) → A-3 paper-summarizer → A-4 rag-curator | `research/topics/<slug>.topic.json` + `papers/marp-summary/<V>/<Y>/*.md` + `research/reports/papers/<slug>/v<N>/{Report.md, Report.slides.md}` |
-| `qa` | `/research-qa <slug> <question>` | answer-formulator가 `research/plans/qa/<slug>/v<N>/PLAN.md` 작성 (hybrid_query dry-run, 답변 본문 금지) | B-1 answer-formulator (Direct Answer + Evidence Chain 3–7) → B-2 critic (+ codex-reviewer 병렬 4축) | `research/answers/`·`research/critiques/` + `research/reports/qa/<slug>/v<N>/{Report.md, Report.slides.md}` |
-| `experiments` | `/research-experiments <slug>` | `experiment-design` 스킬 내 experiment-planner + critic이 `research/plans/experiments/<slug>/v<N>/PLAN.md` 작성 (Evidence↔Experiment 1:1, Expected Under / If Wrong 수치) | `experiment-impl`: E-1 code-implementer → E-2 implementation-verifier → E-3 codex-reviewer → smoke test; 후속 `experiment-report` 스킬 | `experiments/<slug>/{code,configs,run.sh,IMPL_MAP.md}` + `research/reports/experiments/<slug>/v<N>/{Report.md, Report.slides.md}` |
-| `analyze` | `/research-analyze <slug>` | results-analyst가 `research/plans/analyze/<slug>/v<N>/PLAN.md` 작성 (verdict 규칙·REFUTED 4-way 분류·revision seed 포맷) | F-1 results-analyst → F-2 codex-reviewer | `research/diagnoses/<slug>.md` + `research/reports/analyze/<slug>/v<N>/{Report.md, Report.slides.md}` |
+| `papers` | `/research-papers <topic>` | **Step 1.5 topic-refine (Socratic interview, main session)** → paper-hunter (mode=plan-only)가 직접 `research/plans/papers/<slug>/v<N>/PLAN.md`를 작성 (topic.json 기반) | 메인 세션이 sub-phase별 Agent(run_in_background=true)를 순차 dispatch: A-1 paper-hunter → A-1.5 abstract-indexer → A-2 paper-triage (`--topic-spec`) → A-3 paper-summarizer → A-4 rag-curator | `research/topics/<slug>.topic.json` + `papers/marp-summary/<V>/<Y>/*.md` + `research/reports/papers/<slug>/v<N>/{Report.md, Report.slides.md}` |
+| `qa` | `/research-qa <slug> <question>` | answer-formulator (mode=plan-only)가 직접 `research/plans/qa/<slug>/v<N>/PLAN.md`를 작성 (hybrid_query dry-run, 답변 본문 금지) | 메인 세션이 sub-phase별 Agent(run_in_background=true)를 순차 dispatch: B-1 answer-formulator (Direct Answer + Evidence Chain 3–7) → B-2 critic (+ codex-reviewer 병렬 4축) | `research/answers/`·`research/critiques/` + `research/reports/qa/<slug>/v<N>/{Report.md, Report.slides.md}` |
+| `experiments` | `/research-experiments <slug>` | experiment-planner (mode=plan-only)가 직접 `research/plans/experiments/<slug>/v<N>/PLAN.md`를 작성 (Evidence↔Experiment 1:1, Expected Under / If Wrong 수치) | 메인 세션이 sub-phase별 Agent(run_in_background=true)를 순차 dispatch: `experiment-impl`: E-1 code-implementer → E-2 implementation-verifier → E-3 codex-reviewer → smoke test; 후속 `experiment-report` 스킬 | `experiments/<slug>/{code,configs,run.sh,IMPL_MAP.md}` + `research/reports/experiments/<slug>/v<N>/{Report.md, Report.slides.md}` |
+| `analyze` | `/research-analyze <slug>` | results-analyst (mode=plan-only)가 직접 `research/plans/analyze/<slug>/v<N>/PLAN.md`를 작성 (verdict 규칙·REFUTED 4-way 분류·revision seed 포맷) | 메인 세션이 sub-phase별 Agent(run_in_background=true)를 순차 dispatch: F-1 results-analyst → F-2 codex-reviewer | `research/diagnoses/<slug>.md` + `research/reports/analyze/<slug>/v<N>/{Report.md, Report.slides.md}` |
 
 ### 4.2 Phase A/B/C 프로토콜 (공통)
 
 - **Phase A**: 담당 에이전트가 PLAN.md만 작성. 부작용(논문 다운로드·답변 작성·코드 생성·실험 실행) 금지. 선행 산출물 부재 시 `⚠ Prerequisite Missing` 블록 삽입 (차단 아님, 경고만). **papers stage는 Phase A 앞에 Step 1.5 topic-refine interview가 실행되어 `research/topics/<slug>.topic.json`을 생성하며, PLAN.md는 이 스펙을 canonical 입력으로 쓴다.**
 - **Phase B**: 사용자 피드백 반영 → "이대로 구현해도 될까요?" 프롬프트. **명시 트리거 phrase 없이는 Phase C 진입 절대 불가**.
-- **Phase C**: `STAGE_SUBPHASES` 체인을 순차 blocking dispatch → 마지막 sub-phase 종료 후 Report 쌍 생성(`report_builder.py`) → `loop_state.py stage-complete` → `idle` 복귀. **다음 stage 권장 문구 출력 금지** (Decision #6).
+- **Phase C**: 메인 세션이 `STAGE_SUBPHASES` 체인을 순차 blocking dispatch한다. 각 sub-phase는 `Agent(..., run_in_background=true)`로 보내고 task-notification을 받아 artifact 검증 후 다음 sub-phase를 dispatch한다. 마지막 sub-phase 종료 후 메인 세션이 직접 `report_builder.py`를 호출해 Report 쌍을 만들고 `loop_state.py stage-complete`로 `idle` 복귀한다. **다음 stage 권장 문구 출력 금지** (Decision #6).
 
 ### 4.3 Phase B 트리거 whitelist (대소문자 무관, trim 후 정확 매칭)
 
@@ -172,7 +172,7 @@
 
 ## 7. 에이전트 팀 구성
 
-14 에이전트 (연구 루프 12 + codex-reviewer + harness-engineer) + phase 매핑 표는 `docs/harness-layout.md` 참조. 상세 워크플로우는 `orchestrate` 스킬.
+14 에이전트 (연구 루프 12 + codex-reviewer + harness-engineer) + phase 매핑 표는 `docs/harness-layout.md` 참조. 상세 워크플로우는 각 stage 슬래시 커맨드(`/research-papers`, `/research-qa`, `/research-experiments`, `/research-analyze`) 및 `CLAUDE.md §4.2` 참조.
 
 ---
 

@@ -24,7 +24,7 @@ Schema v3
 Five-field core: stage, inner_phase, sub_phase, slug, stage_version.
 
 Stage mapping: each stage owns a bounded list of Phase C sub-phases.
-  papers      → A-1 A-2 A-3 A-4
+  papers      → A-1 A-1.5 A-2 A-3 A-4
   qa          → B-1 B-2
   experiments → E-1 E-2 E-3     (C-1 is covered by Phase A/design skill;
                                   in Phase C only E-1..E-3 execute)
@@ -70,7 +70,7 @@ IDLE = "idle"
 INNER_PHASES = ["A", "B", "C", "completed"]
 
 STAGE_SUBPHASES: dict[str, list[str]] = {
-    "papers":      ["A-1", "A-2", "A-3", "A-4"],
+    "papers":      ["A-1", "A-1.5", "A-2", "A-3", "A-4"],
     "qa":          ["B-1", "B-2"],
     # C-1 is design (Phase A via experiment-design); Phase C runs E-1..E-3.
     "experiments": ["E-1", "E-2", "E-3"],

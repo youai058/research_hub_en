@@ -48,6 +48,20 @@ python3 .claude/skills/paper-summarize/scripts/gemini_digest.py <raw_md_path>
 
 논문마다 섹션 구조가 다르고 figure 위치·용도도 다르므로 **PLANNING 블록(섹션 구조 + 섹션별 이미지 배치)을 먼저 결정한 뒤 본문을 채운다**. 고정 6-part 템플릿에 억지로 맞추지 않는다. 섹션 순서·제목·이미지 배치는 PLANNING이 정해지면 그대로 유지 — 도중에 재배치 금지.
 
+**Step 2.0 — Agent-level cache re-check (idempotency guard)**
+
+Before running any summarization work, verify that this paper was not already summarized in a concurrent run. The main-session cache_gate.py filtered the batch, but a race is possible (two `/research-papers` runs on the same slug).
+
+```bash
+python3 /home/irteam/sw/research_hub/.claude/skills/paper-summarize/scripts/cache_gate.py \
+    --paths "<this_paper_raw_md>" \
+    --out /tmp/cache_gate_recheck_<slug>.json
+```
+
+Parse the JSON. If `hits` contains this paper's path, skip the remaining steps for this paper and go to the next one in `batch_paths`. Log `[summarizer] cache re-check: <slug> already fresh — skipping`.
+
+This step is cheap (~100ms per paper) and guards against wasted work when two main sessions race.
+
 **Step 2a — digest 읽기**
 1. `raw_md_path`와 `digest_path`를 Read 도구로 읽는다. **pymupdf 직접 호출 금지** (fallback 제외).
 2. digest의 `## Author Framing` 블록, 각 섹션 제목, `# Figures and Tables index`, frontmatter의 `figures:` 리스트를 스캔해 (a) 논문 구조 (b) 사용 가능한 이미지 후보를 파악한다.
@@ -114,6 +128,31 @@ PLANNING의 각 `[Figure N]` 태그가 달린 섹션에, IMAGE_SOURCES에 명시
 
 **Step 2e — 저장 경로 라우팅**
 `venue_class` 필드 기반. `<slug>.kg.json`도 같은 디렉토리에 emit.
+
+**Step 2f — Invoke kg_skeleton.py and patch Claim/Result on top**
+
+Before writing `<slug>.kg.json`, generate the deterministic skeleton:
+
+```bash
+python3 /home/irteam/sw/research_hub/.claude/skills/paper-summarize/scripts/kg_skeleton.py \
+    --digest <papers/digest/<V>/<Y>/<slug>.digest.md> \
+    --slug <slug> \
+    --out <papers/digest/<V>/<Y>/<slug>.kg.skeleton.json>
+```
+
+Capture the exit code:
+- `0` — skeleton written successfully. Read the file, preserve every existing node + edge, then **append only**:
+  - `Claim` nodes (one per distinct empirical claim the paper makes)
+  - `Result` nodes (one per reported metric × method × dataset cell)
+  - `MAKES_CLAIM` edges from `paper:<slug>` to each new `claim:<slug>#N`
+  - `REPORTS_RESULT` edges from `paper:<slug>` to each new `result:<slug>#N`
+  - `EVIDENCED_BY` edges from each supporting result back to the claim it evidences (i.e. `src=result:<slug>#M`, `dst=claim:<slug>#N`; must include `meta.polarity ∈ {support, contradict, mixed}`)
+
+  Write the merged structure to `<slug>.kg.json` (not `.kg.skeleton.json`). Set `kg_skeleton_used: true` in the Marp frontmatter.
+
+- `1`, `2`, or `3` (non-zero) — skeleton step failed. Fall back to authoring the full KG file from scratch (Paper/Author/Venue/Method/.../Claim/Result). Set `kg_skeleton_used: false` in the Marp frontmatter. This is the pre-v7 behavior; no correctness regression.
+
+**Invariant**: the skeleton file itself is a build artefact in `papers/digest/<V>/<Y>/`. It is not versioned, not an agent deliverable, and can be deleted at any time without breaking anything (next run regenerates it).
 
 ### Fallback (Gemini digest 실패 시)
 
@@ -326,6 +365,9 @@ $$ ... $$
   - `etc`       → `papers/marp-summary/etc/<Year>/` (평탄 구조, 하위 venue 디렉토리 없음)
   - 두 경로 모두 **정상 출력**이며 `etc`가 품질 열등을 의미하지 않는다 — 요약 기준은 동일하다.
 - [ ] 금지 경로 확인: `papers/arXiv/`, `papers/OpenReview/`, `papers/preprint/`, `papers/workshop/`, `papers/findings/` 등 소스/속성 디렉토리에 저장하지 않았는지 (해당 논문은 전부 `papers/marp-summary/etc/<Year>/`로)
+- [ ] Frontmatter `source_digest_sha256` matches `sha256(<slug>.digest.md)` byte-for-byte
+- [ ] Frontmatter `prompt_version` equals digest's `prompt_version` (both should be `v7` for new summaries)
+- [ ] Looped over every entry in `batch_paths` — none silently skipped except via Step 2.0 cache re-check
 
 ---
 

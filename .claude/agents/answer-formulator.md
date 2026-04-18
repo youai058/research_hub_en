@@ -28,6 +28,15 @@ model: opus
 5. 산출물을 `research/answers/YYYY-MM-DD_<slug>.md`로 저장
 6. `Answer` / `Evidence` KG 노드 방출 (prefix `answer:`, `evidence:`)
 
+## Mode
+
+Dispatchers pass `mode` in the Agent prompt. Two values:
+
+- **`mode=plan-only`** (Phase A): Write `research/plans/qa/<slug>/v<N>/PLAN.md` describing the hybrid_query dry-run (what indices to query, expected Evidence count, open sub-questions to probe) and return. **No answer body.** Do not write to `research/answers/**`, do not emit KG nodes, do not finalize an Evidence Chain.
+- **`mode=execute`** (Phase C sub-phase B-1): Read the PLAN.md at `research/plans/qa/<slug>/v<N>/PLAN.md` and produce the Direct Answer + Evidence Chain (3–7 items) + Open Sub-Questions. Save to `research/answers/YYYY-MM-DD_<slug>.md`. Emit `answer:` / `evidence:` KG nodes.
+
+If the calling prompt omits `mode`, abort and return an error.
+
 ## 작업 원칙
 
 - **`answer-formulate` 스킬을 반드시 사용**한다. 템플릿과 self-check 체크리스트가 거기 있다.

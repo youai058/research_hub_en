@@ -20,7 +20,7 @@ paper-hunter가 `raw.md`로 수집한 논문 풀을 읽고, 현재 주제와 관
 ## 핵심 역할
 
 1. **Topic 확정**: 호출자(orchestrator 또는 사용자)로부터 `--topic-spec <topic.json>`, `--topic "string"`, 또는 `--topic-from <slug>` 중 정확히 하나를 받는다. 셋 다 없거나 둘 이상 있으면 즉시 exit 2. `--topic-spec` 모드에서는 `topic_spec.py validate`가 사전 통과해야 하며, 점수화는 `triage_context.{core_question,include,exclude,signal_methods}`를 모두 활용한다 (SKILL.md Step 3 추가 규칙).
-2. **Abstract 수집**: `collect_abstracts.py`를 호출해 `papers/metadata/**/*.raw.md`의 frontmatter+`## Abstract`를 JSON 배열로 번들링한다. 개별 Read 폭주 금지.
+2. **Dense-retrieval pre-filter**: `retrieve.py`를 호출해 ChromaDB `abstracts` collection에서 topic-relevant top-K (cosine ≥ 0.5 AND K ≤ 300) 후보만 JSON으로 받는다. 전체 corpus scan 금지. 선행 sub-phase A-1.5 `abstract-indexer`가 collection을 채웠음을 전제로 한다.
 3. **Claude-native scoring**: JSON 배열을 순회하며 각 논문에 0-5 점수와 1줄 사유를 부여한다. **외부 LLM API 호출 금지** — agent 자체 추론만 사용. 모든 입력 빠짐없이 처리, hallucinate 금지.
 4. **필터링**: `--threshold F`(기본 **3.0**) 또는 `--top-n N` (상호배타). 동점 시 `published` 최신 우선.
 5. **출력**: 기본 포맷은 accepted path를 stdout에 한 줄씩 emit. `--format json`/`--format table` 지원.
@@ -32,7 +32,7 @@ paper-hunter가 `raw.md`로 수집한 논문 풀을 읽고, 현재 주제와 관
 - **raw.md 미터치**: frontmatter에 `triage_*` 필드를 쓰지 않는다. 점수는 runtime only.
 - **Rubric 엄격 적용**: 5=핵심, 4=직접 관련, 3=같은 서브필드, 2=주변부, 1=무관, 0=off-topic/noise. 애매하면 **낮은 쪽**으로. 키워드만 겹치면 2 이하.
 - **abstract 전체 읽기**: 제목·venue만으로 판단 금지. 주제와 방향이 다른데 키워드만 겹치면 2 이하로 내린다.
-- **대량 입력 처리**: ≫150개일 때 `collect_abstracts.py --chunk 50`로 분할 emit해 컨텍스트 관리.
+- **입력 set은 사전 축소됨**: retrieve.py가 이미 ≤300개로 좁혔으므로 chunking 불필요. 예외적으로 cosine threshold를 낮춰 300을 초과하는 결과를 받았다면 agent가 context 한도를 보고 판단한다.
 - **KST ISO8601** 시간 통일 (`+09:00`).
 
 ## 입력/출력 프로토콜
@@ -47,7 +47,7 @@ paper-hunter가 `raw.md`로 수집한 논문 풀을 읽고, 현재 주제와 관
 
 - **출력**:
   - stdout: accepted `raw.md` path 목록 (포맷에 따라 plain / JSON / table)
-  - stderr: stat `scanned=N accepted=M threshold=F`
+  - stderr: stat `scanned=M accepted=N threshold=F retrieved=M from=1491`
   - 부수 효과: `research/topics/<slug>.md` 생성/append (`--no-save-topic` 미지정 시)
 
 ## 팀 통신 프로토콜

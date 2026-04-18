@@ -11,6 +11,7 @@ papers/vector_db/chroma/
 papers/vector_db/*.sqlite
 papers/vector_db/*.sqlite-*
 papers/vector_db/rejected.jsonl
+papers/vector_db/abstracts_manifest.json
 
 # Old locations (keep until confirmed migrated; safe to remove later)
 papers/rag/

@@ -29,6 +29,7 @@ from __future__ import annotations
 import argparse
 import datetime as _dt
 import hashlib
+import json
 import os
 import re
 import subprocess
@@ -42,7 +43,7 @@ import urllib.error
 
 # -------- constants --------------------------------------------------------
 
-PROMPT_VERSION = "v6"
+PROMPT_VERSION = "v7"
 GEMINI_MODEL = "gemini-3-pro-preview"
 GEMINI_TIMEOUT_SEC = 600
 MIN_FULLTEXT_CHARS = 3000
@@ -78,7 +79,25 @@ Your job is to extract as much content as possible from the paper, following the
    - Hyperparameters, model names, dataset names, baselines — for BOTH proposed method AND every baseline individually. For EACH method (proposed AND each baseline), extract: architecture, key hyperparameters (lr, batch size, training steps/epochs, optimizer, scheduler, method-specific params), training condition (from scratch / finetune / pretrained checkpoint), and source (official repo / reimplemented / reported from paper). If any baseline HP is not reported, note "not reported" explicitly.
    - Narrative connective tissue: 1–2 sentences per subsection summarizing WHY the authors did this, not only WHAT they did. This helps the downstream agent write narrative-style H2/H3 sections.
 
-5. **After all paper sections, append these fixed sections**:
+5. **Entity extraction block (mandatory, before the Figures/Candidates block)**:
+   Emit a `## Entities` H2 section immediately before `# Figures and Tables index`. The section body MUST be exactly four labeled list lines, one per list, bullet style `- `, with items wrapped in double-quotes. Items are case-preserved, deduplicated, max 10 per list. Use empty square brackets `[]` when the paper has none.
+
+```
+## Entities
+- methods: ["<MethodA>", "<MethodB>"]
+- datasets: ["<DatasetX>"]
+- models: ["<Model Family Size>"]
+- metrics: ["<MetricP>"]
+```
+
+   Rules:
+   - `methods` = distinct method names the paper introduces or compares as baselines. Not loss functions, not layers.
+   - `datasets` = public or described datasets used in training or evaluation. Not generic phrases like "synthetic data".
+   - `models` = concrete model families/sizes referenced (e.g. "GPT-2 124M", "Llama-3 8B"). Not architecture classes in general.
+   - `metrics` = evaluation metric names (Perplexity, BLEU, Accuracy, ...).
+   - Keep items short (≤ 40 chars each). No trailing commas. No nested structures.
+
+6. **After the Entities block, append these fixed sections**:
 
 # Figures and Tables index
 - For each figure/table referenced in the main text, one line: `Fig/Tab N — short caption — what it shows — which paper section it belongs to`.
@@ -577,6 +596,52 @@ def _extract_figure_png(
             pass
 
 
+def _extract_entities(body: str) -> dict[str, list[str]]:
+    """Extract the four `- methods:/datasets:/models:/metrics: [...]` lines
+    emitted by Gemini under the `## Entities` H2.
+
+    Returns a dict with exactly those four keys, each a list of strings
+    (possibly empty). If the Entities block is missing or malformed, all
+    four lists are empty (best-effort; downstream kg_skeleton treats missing
+    fields as empty too).
+    """
+    out: dict[str, list[str]] = {
+        "methods": [],
+        "datasets": [],
+        "models": [],
+        "metrics": [],
+    }
+    block_match = re.search(
+        r"^##\s+Entities\s*$\n(.*?)(?=^#|\Z)",
+        body,
+        flags=re.MULTILINE | re.DOTALL,
+    )
+    if not block_match:
+        return out
+    block = block_match.group(1)
+    for key in out:
+        line_m = re.search(
+            rf'^\s*-\s*{key}\s*:\s*\[(.*?)\]\s*$',
+            block,
+            flags=re.MULTILINE,
+        )
+        if not line_m:
+            continue
+        inner = line_m.group(1).strip()
+        if not inner:
+            continue
+        items = re.findall(r'"([^"]+)"', inner)
+        # dedup while preserving order
+        seen = set()
+        ordered = []
+        for it in items:
+            if it and it not in seen:
+                seen.add(it)
+                ordered.append(it)
+        out[key] = ordered[:10]
+    return out
+
+
 def _write_digest(
     digest_path: Path,
     body: str,
@@ -618,6 +683,38 @@ def _write_digest(
         f"key_figure_reason: {_yaml_str(primary['reason'] if primary else None)}",
         f"key_figure_path: {_yaml_str(primary['path'] if primary else None)}",
     ]
+    authors_raw = meta.get("authors", "")
+    authors: list[str] = []
+    if isinstance(authors_raw, list):
+        authors = [str(a).strip() for a in authors_raw if str(a).strip()]
+    elif isinstance(authors_raw, str):
+        s = authors_raw.strip()
+        if s.startswith("[") and s.endswith("]"):
+            try:
+                parsed = json.loads(s)
+                if isinstance(parsed, list):
+                    authors = [str(a).strip() for a in parsed if str(a).strip()]
+            except Exception:
+                pass
+        if not authors and s:
+            authors = [a.strip().strip('"\'') for a in s.split(",") if a.strip()]
+    if authors:
+        fm_lines.append("authors:")
+        for a in authors:
+            fm_lines.append(f"  - {_yaml_str(a)}")
+    else:
+        fm_lines.append("authors: []")
+
+    entities = _extract_entities(body)
+    for key in ("methods", "datasets", "models", "metrics"):
+        vals = entities.get(key, [])
+        if vals:
+            fm_lines.append(f"{key}:")
+            for v in vals:
+                fm_lines.append(f"  - {_yaml_str(v)}")
+        else:
+            fm_lines.append(f"{key}: []")
+
     if figures:
         fm_lines.append("figures:")
         for fig in figures:

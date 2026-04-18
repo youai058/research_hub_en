@@ -436,9 +436,17 @@ When the user responds after Step 4:
 
 ## Step 6 — Phase C: main session dispatches the 4 sub-phases sequentially
 
+**How to read these dispatch specs**: each bulleted block below is the payload for an `Agent(subagent_type: "<agent-name>", run_in_background: true, prompt: "...")` call. Fields under the bullets become `key: value` lines inside the prompt body; `run_in_background: true` is an Agent-tool parameter (not a prompt field); `subagent_type` is implied by the sub-phase header (A-1 → `paper-hunter`, A-2 → `paper-triage`, A-3 → `paper-summarizer`, A-4 → `rag-curator`).
+
 The main session owns the chain. For each of A-1, A-2, A-3, A-4, dispatch one Agent with `run_in_background: true`, wait for task-notification, verify the expected artifact exists, then `stage-advance --to <next-subphase>` before dispatching the next.
 
 **A-1 — paper-hunter (execute)**
+
+Before dispatch, snapshot the current raw-metadata file count so we can compare afterward:
+
+```bash
+PRE_A1_RAW_COUNT=$(find papers/metadata -name '*.raw.md' 2>/dev/null | wc -l)
+```
 
 Dispatch `paper-hunter` with:
 - `run_in_background: true`
@@ -446,36 +454,85 @@ Dispatch `paper-hunter` with:
 - `stage: papers`, `slug`, `stage_version`, `plan_dir`
 - `topic_spec: research/topics/<slug>.topic.json`
 
-After task-notification, verify at least one `papers/metadata/**/<slug>.raw.md` exists (via Glob). Advance:
+After task-notification, verify that the set of `papers/metadata/**/*.raw.md` files grew since the pre-dispatch snapshot (per-paper slugs, not the stage slug):
+
+```bash
+POST_A1_RAW_COUNT=$(find papers/metadata -name '*.raw.md' 2>/dev/null | wc -l)
+test "$POST_A1_RAW_COUNT" -gt "$PRE_A1_RAW_COUNT" \
+    || { echo "paper-hunter did not collect any new raw.md"; exit 6; }
+```
+
+Advance:
 ```bash
 python3 .../loop_state.py stage-advance --to A-2
 ```
 
 **A-2 — paper-triage**
 
+`paper-triage` emits accepted paths to **stdout** and appends a triage log entry to `research/topics/<slug>.md` (see `.claude/skills/paper-triage/SKILL.md`). There is no `papers/triage/` directory; A-3 receives the accepted list via the agent's return body.
+
+Before dispatch, snapshot the triage-log line count:
+
+```bash
+PRE_A2_TOPIC_LINES=$(wc -l < research/topics/<slug>.md)
+```
+
 Dispatch `paper-triage` with:
 - `run_in_background: true`
 - `stage: papers`, `slug`, `stage_version`
 - `topic_spec: research/topics/<slug>.topic.json`
 
-After task-notification, verify `papers/triage/<slug>.triage.jsonl` exists. Advance to A-3.
+After task-notification, capture the agent's return body (the accepted-paths list — pass this into A-3 via the `accepted_paths` prompt field) and confirm the triage log grew:
+
+```bash
+test $(wc -l < research/topics/<slug>.md) -gt "$PRE_A2_TOPIC_LINES" \
+    || { echo "paper-triage did not append a log line"; exit 5; }
+```
+
+Advance to A-3.
 
 **A-3 — paper-summarizer**
+
+Before dispatch, snapshot the current Marp summary file count:
+
+```bash
+PRE_A3_SUMMARY_COUNT=$(find papers/marp-summary -name '*.md' 2>/dev/null | wc -l)
+```
 
 Dispatch `paper-summarizer` with:
 - `run_in_background: true`
 - `stage: papers`, `slug`, `stage_version`
-- the filtered subset from A-2
+- `accepted_paths: <return body from A-2>` (the filtered subset)
 
-After task-notification, verify new files exist under `papers/marp-summary/**/` (via Glob, comparing against a pre-dispatch snapshot). Advance to A-4.
+After task-notification, verify that new summary files exist:
+
+```bash
+POST_A3_SUMMARY_COUNT=$(find papers/marp-summary -name '*.md' 2>/dev/null | wc -l)
+test "$POST_A3_SUMMARY_COUNT" -gt "$PRE_A3_SUMMARY_COUNT" \
+    || { echo "paper-summarizer did not emit any new summaries"; exit 8; }
+```
+
+Advance to A-4.
 
 **A-4 — rag-curator**
+
+Before dispatch, snapshot the RAG manifest `files` dict length (this is what `.claude/hooks/session_start.sh` prints as `rag_indexed_papers`; it is NOT a field on `research/loop_state.kg.json`):
+
+```bash
+PRE_A4_COUNT=$(python3 -c "import json; print(len(json.load(open('papers/vector_db/manifest.json')).get('files', {})))")
+```
 
 Dispatch `rag-curator` with:
 - `run_in_background: true`
 - `stage: papers`, `slug`, `stage_version`
 
-After task-notification, verify `papers/vector_db/manifest.json` updated (mtime newer than start of A-4) and that `rag_indexed_papers` count in `research/loop_state.kg.json` increased.
+After task-notification, verify the manifest grew:
+
+```bash
+POST_A4_COUNT=$(python3 -c "import json; print(len(json.load(open('papers/vector_db/manifest.json')).get('files', {})))")
+test "$POST_A4_COUNT" -gt "$PRE_A4_COUNT" \
+    || { echo "rag-curator did not grow manifest"; exit 7; }
+```
 
 **User-interrupt handling**: If the user sends a message mid-chain, the currently-running Agent is NOT cancelled (every dispatch is `run_in_background: true`). Dialogue with the user, optionally read the in-progress artifact, and decide whether to (a) wait for the current sub-phase to finish then stop, (b) continue, or (c) abort. Do not dispatch the next sub-phase without intent.
 ```

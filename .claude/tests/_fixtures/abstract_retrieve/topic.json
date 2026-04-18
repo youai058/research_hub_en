@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "created": "2026-04-17T12:00:00+09:00",
+  "raw_input": "diffusion LLM jailbreak",
+  "refined_topic": "Masked diffusion language models as a defense against adversarial jailbreak attacks",
+  "triage_context": {
+    "core_question": "Does this paper study diffusion-based language models in the context of jailbreak attacks or defenses?",
+    "include": ["diffusion language model", "jailbreak", "adversarial prompt"],
+    "exclude": ["image diffusion", "medical imaging"],
+    "signal_methods": ["masked diffusion", "denoising"]
+  },
+  "keyword_groups": [
+    ["diffusion language model", "LLDM", "masked diffusion"],
+    ["jailbreak", "adversarial prompt", "prompt injection"]
+  ],
+  "scope": {
+    "venues": ["NeurIPS", "AAAI", "ICLR", "ICML", "ACL", "EMNLP"],
+    "years": [2024, 2025, 2026],
+    "include_arxiv": false
+  },
+  "clarity_scores": {"scope": 0.8, "triage": 0.9, "keywords": 0.8},
+  "termination_reason": "floor",
+  "interview_rounds": 3,
+  "interview_log": []
+}

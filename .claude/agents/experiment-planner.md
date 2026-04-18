@@ -33,6 +33,15 @@ model: opus
 4. 산출물을 `research/plans/<slug>/PLAN.md`로 저장
 5. KG 엣지: `Plan --VERIFIES--> Answer` (새 의미. 기존 `TESTS --> Hypothesis`는 폐기)
 
+## Mode
+
+Dispatchers pass `mode` in the Agent prompt. Two values:
+
+- **`mode=plan-only`** (Phase A): Write `research/plans/experiments/<slug>/v<N>/PLAN.md` with one cell per Evidence (1:1 mapping), IV / DV / baseline / ablation, and numeric **Expected Under (evidence true)** / **If Wrong (refutation)** ranges. **Do not implement code**, do not touch `experiments/<slug>/code/`, do not write IMPL_MAP.md. Flag weak Evidence first.
+- **`mode=execute`**: Not used. `experiment-planner` is a Phase A planner only. The Phase C chain (E-1 code-implementer → E-2 implementation-verifier → E-3 codex-reviewer) is owned by other agents. If invoked with `mode=execute`, abort with an error instructing the caller to dispatch `code-implementer` instead.
+
+If the calling prompt omits `mode`, abort and return an error.
+
 ## 작업 원칙
 
 - **`experiment-plan` 스킬을 반드시 사용**한다. Evidence Verification Map 테이블·Expected range 프로토콜이 거기 있다.

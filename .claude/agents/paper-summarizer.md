@@ -68,12 +68,25 @@ model: opus
   - `etc` → `papers/marp-summary/etc/<Year>/<slug>.md` (평탄 구조, 하위 venue 디렉토리 없음)
   - 두 경로 모두 **정상 출력**이며 `etc`가 품질 열등을 뜻하지 않는다. full-text 독해·adaptive 요약·Critical Reading 기준은 동일하다.
   - `papers/arXiv/`, `papers/OpenReview/`, `papers/preprint/`, `papers/workshop/`, `papers/findings/` 같은 소스/속성 디렉토리에 저장 금지 — 전부 `papers/marp-summary/etc/<Year>/`로 모은다.
+- **Frontmatter cache 계약 (필수)**: 저장하는 Marp `<slug>.md`의 YAML frontmatter에 **반드시** `source_digest_sha256`와 `prompt_version`을 써라. 값은 digest.md의 sha256과 digest frontmatter의 `prompt_version`을 그대로 복사. 이 필드가 없으면 cache_gate.py가 다음 실행에서 전부 stale로 재생성시킨다.
+- **KG skeleton patch flow (필수)**: `kg_skeleton.py`가 쓴 `<slug>.kg.skeleton.json`을 읽어 그 위에 Claim/Result 노드 + MAKES_CLAIM / REPORTS_RESULT / EVIDENCED_BY 엣지만 얹어라. Paper/Author/Venue/Method/Dataset/Model/Metric 노드와 AUTHORED_BY/PUBLISHED_IN/USES_METHOD/USES_DATASET/USES_MODEL/MEASURES_WITH 엣지는 **다시 쓰지 말 것** — skeleton이 이미 만든 것을 중복 쓰면 nodes/edges가 두 배가 되고 kg-curator가 alias 충돌을 잡는다. skeleton 파일이 없거나 exit code ≠ 0이었으면 예외적으로 Claude가 KG 전체를 작성하고 frontmatter에 `kg_skeleton_used: false`를 써라.
+- **Batch 순차 처리**: `batch_paths`의 각 paper를 한 개씩 처리하되, 한 paper 실패(예: gemini_digest exit 3 — PDF 확보 실패)가 배치 전체를 중단시키지 않도록 `try/except`로 감싸고, 실패 slug는 stderr에 `BATCH FAIL: <slug> reason=<...>`로 기록한 뒤 다음 paper로 계속.
 
 ## 입력/출력 프로토콜
 
-- **입력**: `papers/metadata/<V>/<Y>/<slug>.raw.md` + 실제 PDF 전문 (Gemini digest 경유)
-- **출력**: `papers/marp-summary/<V>/<Y>/<slug>.md` (Marp, adaptive outline + 4개 앵커)
-- **형식**: `paper-summarize` 스킬의 adaptive 템플릿 그대로
+- **입력**: `batch_paths: List[str]` — 한 호출에서 B=5개의 `papers/metadata/<V>/<Y>/<slug>.raw.md` 절대경로를 받는다 (cache_gate.py가 stale+miss로 분류한 것만). 단일 paper 호출도 `batch_paths`에 하나만 담아 받는다. 구(舊) `accepted_path` 단일 필드는 더 이상 사용하지 않는다.
+- **처리 순서 (각 raw.md에 대해)**:
+  1. `python3 .claude/skills/paper-summarize/scripts/gemini_digest.py <raw_md>` 를 실행해 `papers/digest/<V>/<Y>/<slug>.digest.md` 생성 (이미 cache-hit이면 스크립트가 즉시 리턴).
+  2. `python3 .claude/skills/paper-summarize/scripts/kg_skeleton.py --digest <digest_path> --slug <slug> --out <papers/digest/<V>/<Y>/<slug>.kg.skeleton.json>` 를 실행. exit code ≠ 0이면 fallback (Claude가 KG 전체 작성).
+  3. digest + skeleton을 Read하고, Marp 본문 + KG patch (Claim/Result/EVIDENCED_BY 추가)를 작성.
+  4. `papers/marp-summary/<V|etc>/<Y>/<slug>.md` 저장. frontmatter에 **반드시** 다음 4 필드:
+     - `source_digest_sha256: "<sha256 of the digest.md file>"`
+     - `prompt_version: "<same value as digest frontmatter prompt_version>"`
+     - `venue_class: "whitelist" | "etc"`
+     - `kg_skeleton_used: true | false` (skeleton fallback이면 false)
+  5. `papers/marp-summary/<V|etc>/<Y>/<slug>.kg.json` 저장 — skeleton이 있으면 skeleton을 기반으로 Claim/Result 노드 + MAKES_CLAIM / REPORTS_RESULT / EVIDENCED_BY 엣지만 추가.
+- **출력**: `batch_paths` 안의 모든 paper에 대해 (4)와 (5). 중도 실패 시 어느 slug에서 멈췄는지 stderr에 기록.
+- **형식**: `paper-summarize` 스킬의 adaptive 템플릿 그대로 (4개 필수 앵커 + PLANNING 블록).
 
 ## 팀 통신 프로토콜
 

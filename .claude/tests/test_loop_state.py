@@ -149,8 +149,14 @@ def test_sub_phase_sequential() -> None:
         ls.save_state(sp, state)
 
         import argparse
-        # A-1 → A-2 (auto)
+        # A-1 → A-1.5 (auto; papers now has an abstract-indexer sub-phase)
         ns = argparse.Namespace(root=str(root), to=None, trigger=None, force=False)
+        ls.cmd_stage_advance(ns)
+        state = ls.load_state(sp)
+        assert state["sub_phase"] == "A-1.5", state
+
+        # A-1.5 → A-2 (explicit, sequential)
+        ns = argparse.Namespace(root=str(root), to="A-2", trigger=None, force=False)
         ls.cmd_stage_advance(ns)
         state = ls.load_state(sp)
         assert state["sub_phase"] == "A-2", state

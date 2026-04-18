@@ -34,6 +34,15 @@ model: opus
 
 **금지된 디렉토리**: `papers/arXiv/`, `papers/OpenReview/`, `papers/preprint/`, `papers/workshop/`, `papers/findings/` — 소스·속성 기반 디렉토리는 생성하지 않는다. etc 분류 논문은 (opt-in 시) 전부 `papers/metadata/etc/<Year>/`로 모인다.
 
+## Mode
+
+Dispatchers (slash commands) pass `mode` in the Agent prompt. Two values:
+
+- **`mode=plan-only`** (Phase A): Write `research/plans/papers/<slug>/v<N>/PLAN.md` and return. **No side effects** — do not invoke `hunt.py`, do not download PDFs, do not touch `papers/metadata/**`, do not update `papers/vector_db/manifest.json`. The PLAN.md must include venues, years, keyword groups (3-variant expansion), `max-per-venue-year`, triage threshold, and `include_arxiv: true/false`.
+- **`mode=execute`** (Phase C sub-phase A-1): Read the PLAN.md at `research/plans/papers/<slug>/v<N>/PLAN.md` and run the full `hunt.py` flow to produce `papers/metadata/<Venue>/<Year>/<slug>.raw.md` (+ `etc/<Year>/` if `--include-arxiv`). Update `manifest.json`. Do not rewrite PLAN.md.
+
+If the calling prompt omits `mode`, abort and return an error — every dispatch must be explicit.
+
 ## 작업 원칙
 
 - **키워드는 "분야 이름"으로 구성**: 사용자 topic에서 분야를 추출해 canonical 용어로 변환하여 넓게 잡는다. 생소·신생 분야는 표기 변형 여러 개를 병기해 recall을 확보하고, narrow term은 triage(`--topic`)에 위임한다 (hunter=recall / triage=precision). 상세 규칙은 `paper-hunt` 스킬 "키워드 전략" 섹션 참조.

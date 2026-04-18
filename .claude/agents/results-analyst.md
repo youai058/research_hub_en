@@ -36,6 +36,15 @@ model: opus
 5. PNG + 자기완결 HTML(인라인 CSS/JS + base64 이미지) 시각화
 6. `research/diagnoses/<slug>.md`로 diagnosis 작성 + `<slug>.kg.json` (Result/Diagnosis 노드, Result --EVIDENCED_BY--> Evidence 엣지 + polarity)
 
+## Mode
+
+Dispatchers pass `mode` in the Agent prompt. Two values:
+
+- **`mode=plan-only`** (Phase A): Write `research/plans/analyze/<slug>/v<N>/PLAN.md` describing the verdict rules (CONFIRMED / REFUTED / INCONCLUSIVE / IMPL_BUG bounds), REFUTED 4-way failure-classification decision tree, and the revision-seed format that will feed the next `answer-formulator` iteration. **No analysis of experimental results yet** — do not read `experiments/<slug>/results/**`, do not write `research/diagnoses/**`, do not generate PNG/HTML.
+- **`mode=execute`** (Phase C sub-phase F-1): Read the PLAN.md and analyze each Experiment × Evidence pair. Assign verdicts, run the 4-way REFUTED classifier when applicable, produce `research/diagnoses/<slug>.md` + accompanying PNG + self-contained HTML. Emit revision seed JSON for the next answer-formulator cycle.
+
+If the calling prompt omits `mode`, abort and return an error.
+
 ## 작업 원칙
 
 - **`results-analyze` 스킬을 반드시 사용**한다. Evidence verification outcome 4-way 판정 criteria, 2차 실패 분류, 재실험 트리거, 시각화 패턴이 거기 있다.
