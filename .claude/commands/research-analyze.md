@@ -24,27 +24,15 @@ Parse the returned JSON (`slug`, `stage_version`, `plan_dir`, `report_dir`). If 
 
 ## Step 3 — Phase A: dispatch results-analyst in plan-only mode
 
-Dispatch the `results-analyst` agent with `run_in_background: true` and the following prompt fields:
-
+Dispatch `results-analyst` with `run_in_background: true` and the following prompt fields:
 - `mode: plan-only`
 - `stage: analyze`
-- `slug: <slug-from-stage-enter>`
-- `stage_version: <from-stage-enter>`
-- `plan_dir: research/plans/analyze/<slug>/v<N>/`
-- `impl_map_path: experiments/<slug>/IMPL_MAP.md` (from prior experiments stage)
-- `plan_experiments_path: research/plans/experiments/<slug>/v<N>/PLAN.md` (for Expected Under / If Wrong thresholds)
-- `results_dir: experiments/<slug>/results/` (may be empty — surface `⚠ Prerequisite Missing` if so)
+- `slug`, `stage_version`, `plan_dir: research/plans/analyze/<slug>/v<N>/`
+- `impl_map_path: experiments/<slug>/IMPL_MAP.md`
+- `plan_experiments_path: research/plans/experiments/<slug>/v<N>/PLAN.md`
+- `results_dir: experiments/<slug>/results/`
 
-In `plan-only` mode the agent reads the passed experiments artifacts and writes ONLY the PLAN.md covering:
-
-- **Verdict decision rules** (CONFIRMED / REFUTED / INCONCLUSIVE / IMPL_BUG) — uses `decide_verdict()` thresholds from the experiments IMPL_MAP
-- **REFUTED 4-way sub-classification decision tree** (claim wrong → qa B-1 / impl bug → experiments E-1 / setup error → experiments C-1 / data issue → papers A-1)
-- **Visualization list** (PNG + self-contained HTML inventory)
-- **Revision seed format** (`{drop_evidence_ids, add_conditions, reframe_hints}`)
-
-**No verdict classification yet, no `research/diagnoses/**` write, no PNG/HTML generation.**
-
-Wait for the background agent to complete via task-notification. Then verify:
+Agent writes ONLY PLAN.md covering verdict decision rules (CONFIRMED / REFUTED / INCONCLUSIVE / IMPL_BUG), REFUTED 4-way classifier, visualization list, and revision seed format. **No verdict execution, no `research/diagnoses/**` write.** Wait for task-notification, then verify:
 
 ```bash
 test -f /home/irteam/sw/research_hub/research/plans/analyze/<slug>/v<N>/PLAN.md \
@@ -60,37 +48,24 @@ The PLAN.md must include:
 
 Do NOT self-advance to Phase B or C.
 
-## Step 4 — Present PLAN and wait for user
+## Step 4 — Phase B: present PLAN and user gate
 
-Print:
-1. PLAN.md absolute path
-2. 3-line summary (Evidence/Experiment count to judge + verdict rule preview + revision-seed schema)
-3. Prerequisite warning block (if any)
-4. "PLAN.md 검토 후 피드백 주시거나, 이대로 진행하려면 `구현해줘` / `proceed` 같은 트리거 phrase로 응답해주세요."
+Print PLAN.md path, 3-line summary, prerequisite warning (if any), and "PLAN.md 검토 후 피드백 주시거나, 이대로 진행하려면 `구현해줘` / `proceed` 같은 트리거 phrase로 응답해주세요."
 
-**Hard stop here.** Do not call `stage-advance --to C` without an explicit trigger phrase from the user.
+**Hard stop.** When user responds, check via `python3 /home/irteam/sw/research_hub/.claude/scripts/loop_state.py trigger-check "<phrase>"`. If whitelisted, advance to C:
+```bash
+python3 /home/irteam/sw/research_hub/.claude/scripts/loop_state.py stage-advance --to B
+python3 /home/irteam/sw/research_hub/.claude/scripts/loop_state.py stage-advance --to C --trigger "<phrase>"
+```
+Then continue to Step 5. Otherwise treat as feedback — re-dispatch `results-analyst` in `mode=plan-only` and return here.
 
-## Step 5 — Phase B: user alignment and trigger gate
+## Step 5 — Phase C: main session dispatches F-1 then F-2
 
-When the user responds after Step 4:
-
-- If their phrase is whitelisted (check via `python3 /home/irteam/sw/research_hub/.claude/scripts/loop_state.py trigger-check "<phrase>"`), advance the loop state:
-  ```bash
-  python3 /home/irteam/sw/research_hub/.claude/scripts/loop_state.py stage-advance --to B
-  python3 /home/irteam/sw/research_hub/.claude/scripts/loop_state.py stage-advance --to C --trigger "<their phrase>"
-  ```
-  Then continue to Step 6.
-- Otherwise, treat the message as feedback: re-dispatch `results-analyst` in `mode=plan-only` to rewrite PLAN.md in the same `v<N>/` directory, then return to Step 4.
-
-## Step 6 — Phase C: main session dispatches F-1 then F-2
-
-**How to read these dispatch specs**: each bulleted block below is the payload for an `Agent(subagent_type: "<agent-name>", run_in_background: true, prompt: "...")` call. Fields under the bullets become `key: value` lines inside the prompt body; `run_in_background: true` is an Agent-tool parameter (not a prompt field); `subagent_type` is implied by the sub-phase header (F-1 → `results-analyst`, F-2 → `codex-reviewer`).
-
-> Throughout Step 6, the literal string `<slug>` in shell commands is a placeholder — substitute the actual slug value returned by `stage-enter` before executing. It is NOT a shell variable.
-
-The main session owns the chain. For F-1 and F-2, dispatch one Agent with `run_in_background: true`, wait for task-notification, verify the expected artifact exists, then `stage-advance --to <next-subphase>` before dispatching the next.
+(F-1 → results-analyst, F-2 → codex-reviewer). Throughout, `<slug>` is the value from stage-enter — substitute literally. Main session owns the chain: dispatch, wait for task-notification(s), verify artifact(s), `stage-advance --to <next-subphase>`, repeat.
 
 **F-1 — results-analyst (execute)**
+
+Snapshot: `python3 .claude/scripts/verify_sub_phase.py snapshot F-1 --slug <slug>` *(run before dispatch)*
 
 Dispatch `results-analyst` with:
 - `run_in_background: true`
@@ -104,14 +79,7 @@ Dispatch `results-analyst` with:
 
 The agent applies `decide_verdict()` per Experiment × Evidence pair, runs the 4-way REFUTED classifier where applicable, produces visualizations (PNG plus self-contained HTML), writes the revision seed, and emits `research/diagnoses/<slug>.md` + `<slug>.html` + `<slug>.kg.json`.
 
-After task-notification, verify the core diagnosis artifacts exist (the filename is deterministic, so `test -f` is the right check — PNG count is variable because multiple plots may exist and may be embedded base64 in the HTML):
-
-```bash
-test -f /home/irteam/sw/research_hub/research/diagnoses/<slug>.md \
-    || { echo "results-analyst did not emit diagnosis markdown at research/diagnoses/<slug>.md"; exit 15; }
-test -f /home/irteam/sw/research_hub/research/diagnoses/<slug>.html \
-    || { echo "results-analyst did not emit self-contained HTML at research/diagnoses/<slug>.html"; exit 15; }
-```
+Verify: `python3 .claude/scripts/verify_sub_phase.py verify F-1 --slug <slug>` (exit 15 on fail; checks `<slug>.md` grew and `<slug>.html` exists)
 
 Advance:
 ```bash
@@ -129,41 +97,13 @@ Dispatch `codex-reviewer` with:
 - `target_paths: ["research/diagnoses/<slug>.md", "research/diagnoses/<slug>.html", "research/plans/analyze/<slug>/v<N>/PLAN.md"]`
 - `focus: statistical_validity` (optional)
 
-After task-notification, verify the review file exists and parse the verdict:
+Snapshot: `python3 .claude/scripts/verify_sub_phase.py snapshot F-2 --slug <slug>` *(run before dispatch)*
 
-```bash
-REVIEW_PATH=/home/irteam/sw/research_hub/research/reviews/analyze_<slug>_codex_review.md
-test -f "$REVIEW_PATH" \
-    || { echo "codex-reviewer did not emit a review file at $REVIEW_PATH"; exit 16; }
-VERDICT=$(awk '/^---$/{c++;next} c==1 && /^verdict:/{print $2; exit}' "$REVIEW_PATH")
-echo "F-2 verdict: $VERDICT"
+Verify: `python3 .claude/scripts/verify_sub_phase.py verify F-2 --slug <slug>` → prints `verdict: approve|approve_with_revisions|reject` on stdout. Exit 16 on missing/malformed verdict. `approve` / `approve_with_revisions` → Step 7. `reject` → Stop-rule branch below.
 
-case "$VERDICT" in
-    approve|approve_with_revisions)
-        # pass — advance to Step 7 (report generation). `approve_with_revisions`
-        # is treated as `approve` for gating; surface the issues list to the
-        # user in the final Step 7 output.
-        ;;
-    reject)
-        # handle reject per Stop rule below (increment reject counter, re-dispatch F-1 or abort)
-        :
-        ;;
-    *)
-        # Fail closed: missing frontmatter, typo (e.g. `conditional_approve`), or
-        # non-compliant output from codex-reviewer must NOT be silently treated
-        # as approve. Exit 16 is reused because the review file is present-but-
-        # unusable, which falls under "F-2 review-file issue".
-        echo "F-2 verdict missing or unrecognized: '$VERDICT' (see $REVIEW_PATH — frontmatter may be absent)"
-        exit 16
-        ;;
-esac
-```
+**Stop rule** (CLAUDE.md §4.5): on `reject`, re-dispatch F-1 with `codex_feedback: <REVIEW_PATH>`; re-run F-2. Consecutive reject limit = 2 (session-local). On abort, do not call `stage-complete`.
 
-**Stop rule (CLAUDE.md §4.5)**: If `VERDICT == "reject"`, re-dispatch F-1 with `codex_feedback: <REVIEW_PATH>` attached so `results-analyst` can read the review issues and revise (overwriting `research/diagnoses/<slug>.md` + companions in place). Track consecutive rejects in the main session's local reasoning, not in loop_state. After a revised F-1 run, re-run F-2. If F-2 rejects a second consecutive time within the same `stage_version`, abort per CLAUDE.md §4.5 (do not call `stage-complete`) and surface the review file to the user. Any `approve` / `approve_with_revisions` verdict resets the counter and advances to Step 7. This counter is session-local and does NOT survive a session restart — on restart the counter starts at 0 again.
-
-**User-interrupt handling**: If the user sends a message mid-chain, the currently-running Agent is NOT cancelled (every dispatch is `run_in_background: true`). Dialogue with the user, optionally read the in-progress artifact, and decide whether to (a) wait for the current sub-phase to finish then stop, (b) continue, or (c) abort. Do not dispatch the next sub-phase without intent.
-
-## Step 7 — Completion
+## Step 6 — Completion
 
 After Phase C chain completes (F-2 verdict approve or approve_with_revisions), the main session calls `report_builder.py` directly:
 

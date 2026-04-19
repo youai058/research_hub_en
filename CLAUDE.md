@@ -86,7 +86,7 @@
 
 - **Phase A**: 담당 에이전트가 PLAN.md만 작성. 부작용(논문 다운로드·답변 작성·코드 생성·실험 실행) 금지. 선행 산출물 부재 시 `⚠ Prerequisite Missing` 블록 삽입 (차단 아님, 경고만). **papers stage는 Phase A 앞에 Step 1.5 topic-refine interview가 실행되어 `research/topics/<slug>.topic.json`을 생성하며, PLAN.md는 이 스펙을 canonical 입력으로 쓴다.**
 - **Phase B**: 사용자 피드백 반영 → "이대로 구현해도 될까요?" 프롬프트. **명시 트리거 phrase 없이는 Phase C 진입 절대 불가**.
-- **Phase C**: 메인 세션이 `STAGE_SUBPHASES` 체인을 순차 blocking dispatch한다. 각 sub-phase는 `Agent(..., run_in_background=true)`로 보내고 task-notification을 받아 artifact 검증 후 다음 sub-phase를 dispatch한다. 마지막 sub-phase 종료 후 메인 세션이 직접 `report_builder.py`를 호출해 Report 쌍을 만들고 `loop_state.py stage-complete`로 `idle` 복귀한다. **다음 stage 권장 문구 출력 금지** (Decision #6).
+- **Phase C**: 메인 세션이 `STAGE_SUBPHASES` 체인을 순차 blocking dispatch한다. 각 sub-phase는 `Agent(..., run_in_background=true)`로 보내고 task-notification을 받아 artifact 검증 후 다음 sub-phase를 dispatch한다. 마지막 sub-phase 종료 후 메인 세션이 직접 `report_builder.py`를 호출해 Report 쌍을 만들고 `loop_state.py stage-complete`로 `idle` 복귀한다. **다음 stage 권장 문구 출력 금지** (Decision #6). Phase C chain 중 user-interrupt 수신 시 진행 중인 Agent는 취소되지 않음 (`run_in_background: true`이므로); 사용자와 대화하며 현재 artifact 읽기 → (a) 완료 대기 후 중단, (b) 계속, (c) 중단 선택. 의도 없이 다음 sub-phase 미dispatch.
 
 ### 4.3 Phase B 트리거 whitelist (대소문자 무관, trim 후 정확 매칭)
 
