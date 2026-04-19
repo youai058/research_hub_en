@@ -30,6 +30,8 @@ tin = data.get("tool_input") or data.get("input") or {}
 RESEARCH_HUB_PREFIXES = (
     "/home/irteam/sw/research_hub",
     "/home1/irteam/sw/research_hub",
+    "/home/irteam/sw/research_hub_en",
+    "/home1/irteam/sw/research_hub_en",
 )
 
 FORBIDDEN_PREFIXES = (
@@ -61,7 +63,7 @@ def normalize(p: str) -> str:
 def block(reason: str) -> None:
     msg = (
         f"[protect_external_paths] blocked: {reason}\n"
-        "stage 커맨드는 이 guardrail을 우회하지 않음 — 사용자 승인 필요 (lessons.md 2026-04-15)"
+        "stage commands do not bypass this guardrail — user approval required (lessons.md 2026-04-15)"
     )
     print(msg)
     print(msg, file=sys.stderr)

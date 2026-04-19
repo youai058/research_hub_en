@@ -22,7 +22,7 @@ from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Iterable
 
-KST = timezone(timedelta(hours=9))
+UTC = timezone.utc
 CHUNK_TOKEN_LIMIT = 1200
 COLLECTION = "papers"
 EMBED_MODEL = "BAAI/bge-m3"
@@ -232,7 +232,7 @@ def load_manifest(manifest_path: Path) -> dict:
 
 
 def save_manifest(manifest_path: Path, manifest: dict) -> None:
-    manifest["last_update"] = datetime.now(KST).isoformat(timespec="seconds")
+    manifest["last_update"] = datetime.now(UTC).isoformat(timespec="seconds")
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
     manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
 

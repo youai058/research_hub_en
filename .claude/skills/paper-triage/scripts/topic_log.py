@@ -27,7 +27,7 @@ except ImportError:
     print("[topic_log] PyYAML required (conda env LLDM)", file=sys.stderr)
     sys.exit(3)
 
-KST = timezone(timedelta(hours=9))
+UTC = timezone.utc
 ROOT = Path("/home/irteam/sw/research_hub")
 TOPICS_DIR = ROOT / "research" / "topics"
 ASCII_TOKEN_RE = re.compile(r"[A-Za-z][A-Za-z0-9]*")
@@ -37,8 +37,8 @@ TOPIC_SECTION_RE = re.compile(
 )
 
 
-def now_kst_iso() -> str:
-    return datetime.now(KST).isoformat(timespec="seconds")
+def now_iso() -> str:
+    return datetime.now(UTC).isoformat(timespec="seconds")
 
 
 def slugify(topic: str, override: str | None = None) -> str:
@@ -131,7 +131,7 @@ def _new_file_body(slug: str, topic: str, now: str, stats: dict) -> str:
 def append_run(slug: str, topic: str, stats: dict) -> Path:
     TOPICS_DIR.mkdir(parents=True, exist_ok=True)
     path = TOPICS_DIR / f"{slug}.md"
-    now = now_kst_iso()
+    now = now_iso()
     with open(path, "a+", encoding="utf-8") as f:
         fcntl.flock(f.fileno(), fcntl.LOCK_EX)
         try:

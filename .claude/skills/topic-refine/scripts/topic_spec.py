@@ -13,7 +13,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
-KST = timezone(timedelta(hours=9))
+UTC = timezone.utc
 VALID_TERMINATION = {"floor", "plateau", "ceiling", "user_early_exit"}
 REQUIRED_TOP = [
     "version", "created", "raw_input", "refined_topic",
@@ -25,8 +25,8 @@ REQUIRED_SCOPE = ["venues", "years", "include_arxiv"]
 REQUIRED_CLARITY = ["scope", "triage", "keywords"]
 
 
-def now_kst_iso() -> str:
-    return datetime.now(KST).isoformat(timespec="seconds")
+def now_iso() -> str:
+    return datetime.now(UTC).isoformat(timespec="seconds")
 
 
 def validate(payload: dict[str, Any]) -> list[str]:
@@ -95,7 +95,7 @@ def _get(payload: dict[str, Any], dotted: str) -> Any:
 def template(raw_input: str) -> dict[str, Any]:
     return {
         "version": 1,
-        "created": now_kst_iso(),
+        "created": now_iso(),
         "raw_input": raw_input,
         "refined_topic": "",
         "triage_context": {

@@ -94,7 +94,7 @@ All non-trivial work proceeds in units of **stage commands**. Each stage command
 
 Judgement via `python3 .claude/scripts/loop_state.py trigger-check "<phrase>"`. Any other utterance is treated as feedback → re-enter Phase A.
 
-> The list above stays in sync with the `TRIGGER_WHITELIST_EN` constant in `.claude/scripts/loop_state.py`. When adding or removing English phrases, update only these two locations (this §4.3 + `loop_state.py`). Do NOT copy the list into prompt files under `.claude/agents` or `.claude/skills`. (The Korean archive at `docs/ko-archive/CLAUDE.md` documents `TRIGGER_WHITELIST_KO` separately; the two whitelists are independent.)
+> The list above stays in sync with the `TRIGGER_WHITELIST` constant in `.claude/scripts/loop_state.py`. When adding or removing phrases, update only these two locations (this §4.3 + `loop_state.py`). Do NOT copy the list into prompt files under `.claude/agents` or `.claude/skills`.
 
 ### 4.4 loop_state.json v3 schema (5 core fields)
 
@@ -175,4 +175,3 @@ Every paper summary has a **per-paper adaptive outline** (details in the `paper-
 
 ---
 
-*All dates are in Korea Standard Time (KST).*

@@ -29,15 +29,15 @@ import re
 import sys
 from pathlib import Path
 
-KST = _dt.timezone(_dt.timedelta(hours=9))
+UTC = _dt.timezone.utc
 
 
 def _log(msg: str) -> None:
     print(f"[kg_skeleton] {msg}", file=sys.stderr, flush=True)
 
 
-def _now_kst_iso() -> str:
-    return _dt.datetime.now(KST).strftime("%Y-%m-%dT%H:%M:%S%z")
+def _now_iso() -> str:
+    return _dt.datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S%z")
 
 
 def _slugify(name: str) -> str:
@@ -182,7 +182,7 @@ def _build_skeleton(meta: dict, slug: str, digest_path: Path) -> dict:
         "source_file": str(digest_path),
         "source_sha": source_sha,
         "author_agent": "kg_skeleton.py",
-        "extracted_at": _now_kst_iso(),
+        "extracted_at": _now_iso(),
         "nodes": nodes,
         "edges": edges,
     }

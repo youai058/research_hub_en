@@ -14,11 +14,11 @@ Schema v3
   "sub_phase": "A-1|A-2|A-3|A-4|B-1|B-2|C-1|E-1|E-2|E-3|F-1|F-2|null",
   "slug": "<stage-scoped 1st-class identifier>",
   "stage_version": <int|null>,
-  "started_at": "<kst>",
-  "last_update": "<kst>",
+  "started_at": "<utc-iso>",
+  "last_update": "<utc-iso>",
   "history": [ { "stage": ..., "slug": ..., "stage_version": ...,
                  "inner_phase": ..., "sub_phase": ..., "event": ...,
-                 "at": "<kst>" }, ... ]
+                 "at": "<utc-iso>" }, ... ]
 }
 
 Five-field core: stage, inner_phase, sub_phase, slug, stage_version.
@@ -43,7 +43,7 @@ history         append a free-form history entry
 iteration counter and autonomous flag are REMOVED in v3.
 --force bypasses the transition guard where allowed.
 
-Every mutation writes atomically (tmp + rename) and updates last_update (KST).
+Every mutation writes atomically (tmp + rename) and updates last_update (UTC).
 """
 from __future__ import annotations
 
@@ -54,11 +54,11 @@ import os
 import re
 import shutil
 import sys
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-KST = timezone(timedelta(hours=9))
+UTC = timezone.utc
 
 # --------------------------------------------------------------- schema v3
 
@@ -80,16 +80,10 @@ STAGE_SUBPHASES: dict[str, list[str]] = {
 ALL_SUBPHASES: set[str] = {sp for seq in STAGE_SUBPHASES.values() for sp in seq}
 
 # Only these exact phrases unlock B → C.
-# NOTE: `해줘` and `그래` were removed in 2026-04-15 codex-review M2 — too ambiguous
-# as standalone Korean fillers. Keep composites (구현해줘, ok 해, 좋아 진행).
-TRIGGER_WHITELIST_KO = [
-    "구현해줘", "실행해줘", "진행해줘", "ok 해", "시작해",
-    "좋아 진행", "ok 진행", "진행해",
-]
-TRIGGER_WHITELIST_EN = [
+TRIGGER_WHITELIST = [
     "proceed", "go ahead", "run it", "execute", "ok run it", "ok proceed",
 ]
-TRIGGER_WHITELIST = [p.lower() for p in (TRIGGER_WHITELIST_KO + TRIGGER_WHITELIST_EN)]
+TRIGGER_WHITELIST = [p.lower() for p in TRIGGER_WHITELIST]
 
 
 def is_trigger_phrase(utterance: str) -> bool:
@@ -118,8 +112,8 @@ def find_root(explicit: str | None) -> Path:
     raise SystemExit("cannot locate research_hub root (use --root)")
 
 
-def now_kst() -> str:
-    return datetime.now(KST).isoformat(timespec="seconds")
+def now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
 # --------------------------------------------------------- state I/O + migration
@@ -205,7 +199,7 @@ def migrate_to_v3(state: dict[str, Any], state_path: Path) -> dict[str, Any]:
         "event": "migrated_to_v3",
         "from_version": old_version,
         "from_phase": old_phase,
-        "at": now_kst(),
+        "at": now_iso(),
     })
     return new_state
 
@@ -229,7 +223,7 @@ def load_state(state_path: Path) -> dict[str, Any]:
 
 
 def save_state(path: Path, state: dict[str, Any]) -> None:
-    state["last_update"] = now_kst()
+    state["last_update"] = now_iso()
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(".json.tmp")
     tmp.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -333,7 +327,7 @@ def _emit_loop_kg(
     sub = state.get("sub_phase") or "null"
     slug = state.get("slug") or "untitled"
     version = state.get("stage_version") or 0
-    ts = state.get("last_update") or now_kst()
+    ts = state.get("last_update") or now_iso()
 
     slug_clean = re.sub(r"[^a-z0-9]+", "-", slug.lower()).strip("-") or "untitled"
     stage_clean = re.sub(r"[^a-z0-9]+", "-", stage.lower()).strip("-") or "idle"
@@ -373,7 +367,7 @@ def _emit_loop_kg(
         "version": 1,
         "source_file": str(state_path.as_posix()),
         "source_sha": source_sha,
-        "extracted_at": now_kst(),
+        "extracted_at": now_iso(),
         "author_agent": "loop_state.py",
         "nodes": nodes,
         "edges": existing.get("edges") or [],
@@ -404,7 +398,7 @@ def _emit_question_kg(root: Path, slug: str, topic: str, stage: str, stage_versi
     kg_path = q_dir / f"{slug}.kg.json"
 
     node_id = f"question:{slug}"
-    ts = now_kst()
+    ts = now_iso()
     payload = {
         "version": 1,
         "source_file": str((q_dir / f"{slug}.md").as_posix()),
@@ -451,7 +445,7 @@ def _push_history(state: dict[str, Any], event: str) -> None:
         "inner_phase": state.get("inner_phase"),
         "sub_phase": state.get("sub_phase"),
         "event": event,
-        "at": now_kst(),
+        "at": now_iso(),
     })
 
 
@@ -483,7 +477,7 @@ def cmd_stage_enter(args: argparse.Namespace) -> int:
     slug = args.slug
     topic = (args.topic or "").strip()
     if not slug and topic:
-        date = datetime.now(KST).strftime("%Y-%m-%d")
+        date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
         slug = f"{date}_{slugify(topic)}"
     if not slug:
         raise SystemExit("stage-enter: --slug or --topic is required")
@@ -497,7 +491,7 @@ def cmd_stage_enter(args: argparse.Namespace) -> int:
         "sub_phase": None,
         "slug": slug,
         "stage_version": version,
-        "started_at": state.get("started_at") or now_kst(),
+        "started_at": state.get("started_at") or now_iso(),
     })
     _push_history(state, "stage-enter")
     save_state(state_path, state)
@@ -761,7 +755,7 @@ def cmd_history(args: argparse.Namespace) -> int:
         "event": args.event,
         "outcome": args.outcome,
         "note": args.note or "",
-        "at": now_kst(),
+        "at": now_iso(),
     }
     state.setdefault("history", []).append(entry)
     save_state(state_path, state)

@@ -140,8 +140,8 @@ def check_skills(skills_dir: Path) -> list[tuple[str, str, Path]]:
             err(f"{sk}: missing YAML frontmatter")
             continue
         # Strict PyYAML parse — catches unquoted scalars that contain ": "
-        # (e.g. description: ... 트리거: '...') which the hand-rolled parser
-        # above silently drops. Added for Med-2 (3차 audit).
+        # (e.g. description: ... Triggers: '...') which the hand-rolled parser
+        # above silently drops. Added for Med-2 (3rd audit).
         try:
             import yaml  # type: ignore
         except ImportError:
@@ -205,7 +205,7 @@ def check_mcp(project: Path) -> None:
 def check_trigger_overlap(descs: list[tuple[str, str, Path]]) -> None:
     tokens = []
     for name, desc, path in descs:
-        toks = set(re.findall(r"[A-Za-z가-힣]{3,}", desc.lower()))
+        toks = set(re.findall(r"[A-Za-z]{3,}", desc.lower()))
         tokens.append((name, toks, path))
     reported: set[tuple[str, str]] = set()
     for i in range(len(tokens)):

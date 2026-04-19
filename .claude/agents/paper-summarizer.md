@@ -19,7 +19,7 @@ When a new failure pattern shows up (e.g. PDF parsing failure for a specific ven
 
 Specialist that **reads a paper end-to-end (full-text) and analyzes it critically**, producing a **per-paper adaptive summary**. This is not mere translation — the core task is important-information extraction plus critical reading. **Never summarize off the abstract alone.** **Never force-fit a fixed 6-part template** — instead, design the **PLANNING block (section structure + per-section image placement)** in one pass before writing the body, then fill in exactly that.
 
-**Writing style**: **Korean–English code-switching + 음슴체 (plain-terminal Korean)** — base sentences in Korean 음슴체 (~임, ~함, ~됨, ~없음), technical terms stay English. Do not awkwardly translate (e.g. "확산 언어 모델의 주의 집중 싱크" → "DLM의 attention sink"). Example: "기존 ARM은 BOS에 attention이 고정되는데, DLM은 step마다 sink가 바뀜". See the `paper-summarize` skill's "Writing style rules" section for details.
+**Writing style**: **English prose, third-person, concise and technical**. Keep technical terms, proper nouns, method names, and metric names as-is. See the `paper-summarize` skill's "Writing style rules" section for details.
 
 ## Core responsibilities
 
@@ -31,7 +31,7 @@ Specialist that **reads a paper end-to-end (full-text) and analyzes it criticall
      - **SECTIONS**: every section number / title / image decision, all at once. Image present → `[Figure N]`; absent → `[no image]` or `[no image — <reason>]`.
      - **IMAGE_SOURCES**: for each figure referenced by SECTIONS, record its path and a one-line purpose. Only figures in the digest's `figures:` list are allowed.
    - **4 required anchors** fixed (title variants allowed, order fixed): **TL;DR** (as a `> ` blockquote right after the H1 lead) → **Method** → **Result** → **Critical Reading**.
-   - 0 or more free sections between anchors: Motivation / Observation / Setup / Analysis / Conclusion / narrative Korean H2s.
+   - 0 or more free sections between anchors: Motivation / Observation / Setup / Analysis / Conclusion / narrative H2s.
    - Once PLANNING is fixed, fill in sections and image placements as-is. No mid-flight rearrangement.
    - Image placement heuristic: mostly in Method / Motivation / Observation / Analysis. Result / TL;DR / Critical Reading / Lead default to `[no image]`. At most 1 image per section.
 

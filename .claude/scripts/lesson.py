@@ -26,7 +26,7 @@ from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Any
 
-KST = timezone(timedelta(hours=9))
+UTC = timezone.utc
 
 DOMAIN_MAP = {
     "global": "lessons.md",
@@ -64,7 +64,7 @@ def find_root(explicit: str | None) -> Path:
 
 
 def today_kst() -> str:
-    return datetime.now(KST).strftime("%Y-%m-%d")
+    return datetime.now(UTC).strftime("%Y-%m-%d")
 
 
 def count_entries(text: str) -> int:
@@ -98,7 +98,7 @@ updated: {today}
 
 # Lessons — {domain.capitalize()}
 
-append-only. 오래된 항목은 삭제하지 말고 `superseded` 표시.
+Append-only. Do not delete old entries; mark them `superseded`.
 
 ---
 
@@ -216,7 +216,7 @@ def _emit_lesson_kg(
         "version": 1,
         "source_file": str(target_md.as_posix()),
         "source_sha": source_sha,
-        "extracted_at": datetime.now(KST).isoformat(timespec="seconds"),
+        "extracted_at": datetime.now(UTC).isoformat(timespec="seconds"),
         "author_agent": "lesson.py",
         "nodes": nodes,
         "edges": existing.get("edges") or [],
@@ -227,7 +227,7 @@ def _emit_lesson_kg(
     tmp.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     tmp.replace(kg_path)
 
-    # Med-3 (3차 audit): direct .write_text bypasses PostToolUse(Write|Edit|
+    # Med-3 (3rd audit): direct .write_text bypasses PostToolUse(Write|Edit|
     # MultiEdit) hook. Touch the KG stale marker so kg-curator re-ingests the
     # new lesson node on next build. target_md is <root>/docs/lessons-*.md,
     # so parents[1] is the research_hub root.

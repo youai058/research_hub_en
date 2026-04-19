@@ -103,12 +103,12 @@ Rules:
 **4 required anchor sections** (title variants allowed, order as below):
 1. **TL;DR** — first content slide right after the H1 lead. A `> ` blockquote of one or two sentences.
 2. **Method** — core idea + equation verbatim + pseudocode / figure reference.
-3. **Result** (or "Experiments Result", "실험 결과") — numeric tables MUST be Markdown tables.
+3. **Result** (or "Experiments Result") — numeric tables MUST be Markdown tables.
 4. **Critical Reading** — 3–5 bullets on the paper's weaknesses.
 
 **Two PLANNING outline examples**:
 - *classical*: Lead → TL;DR → Motivation → Method(Figure) → Setup → Result → Critical Reading
-- *narrative*: Lead → TL;DR → "왜 이 문제가 어려운가" → "핵심 아이디어"(Figure) → "어떻게 통하는가"(Figure) → Result → Critical Reading
+- *narrative*: Lead → TL;DR → "Why is this problem hard" → "Core idea"(Figure) → "How it works"(Figure) → Result → Critical Reading
 
 **Step 2c — Fill the body (exactly matching PLANNING)**
 1. Implement SECTIONS' order, titles, and image placement **as-is**. Do not add / remove / rearrange.
@@ -205,19 +205,19 @@ PLANNING:
 
 ## TL;DR
 
-> {one or two sentences — what the paper shows and why it matters. Maintain 음슴체. Example: "LLaDA-style discrete DLM에서 attention sink가 ARM과 달리 denoising step마다 shift한다는 걸 empirical하게 보여줌. 이는 DLM-specific prompt injection defense가 필요함을 시사함."}
+> {one or two sentences — what the paper shows and why it matters. Example: "Shows empirically that the attention sink in LLaDA-style discrete DLMs shifts with every denoising step, unlike ARM. This suggests DLM-specific prompt injection defenses are needed."}
 
 ---
 
 ## Motivation  <!-- Free section, only when the paper has this flow -->
 
 - **Problem**: {problem to solve}
-- **기존 approach**: {prior work approach}
+- **Prior approach**: {prior work approach}
 - **Limitation**: {limitation that motivates this work}
 
 ---
 
-## Method  <!-- Required anchor. Title variants OK ("Approach", "우리가 제안하는 것") -->
+## Method  <!-- Required anchor. Title variants OK ("Approach", "What we propose") -->
 
 - Core idea in one sentence
 - Equations (digest verbatim):
@@ -267,10 +267,10 @@ $$
 
 ## Critical Reading  <!-- Required anchor -->
 
-**논문의 부족한 부분**:
+**The paper's weaknesses**:
 - {Weakness 1: e.g., experiments limited to specific dataset}
 - {Weakness 2: e.g., baseline is outdated version}
-- {Weakness 3: e.g., 32% gap with main claim on OWT framed as "match or exceed"}
+- {Weakness 3: e.g., a 32% gap with the main claim on OWT framed as "match or exceed"}
 
 ---
 
@@ -279,22 +279,22 @@ $$
 `keyword1`, `keyword2`, `keyword3`, ...
 ```
 
-### Narrative outline example (free Korean H2 as long as the 4 anchors hold)
+### Narrative outline example (free narrative H2s as long as the 4 anchors hold)
 
 ```markdown
 ## TL;DR
 > ...
 
-## 왜 이 문제가 어려운가
+## Why is this problem hard
 - ...
 
-## 핵심 아이디어 — PAD가 하는 것
+## Core idea — what PAD does
 $$ ... $$
 
-## Method  <!-- Anchor title can stay "Method" or become "PAD 어떻게 동작하는가?" -->
+## Method  <!-- Anchor title can stay "Method" or become "How PAD works" -->
 - ...
 
-## 실험 결과가 말하는 것
+## What the experiments tell us
 | ... | ... | ... |
 
 ## Critical Reading
@@ -307,17 +307,15 @@ $$ ... $$
 - If a slide has >7 bullets, split into a follow-up like "## Method (cont.)".
 - Target total ~12–18 slides (varies with paper complexity).
 
-## Writing style (Code-switching + 음슴체)
+## Writing style (English, concise and technical)
 
-**Korean–English code-switching in 음슴체 register**: use the natural code-switched 음슴체(~임, ~함, ~됨, ~없음) voice that researchers write in lab notes / community posts.
-- **Sentence endings in 음슴체**: use "~함/~했음/~임/~됨/~있음/~없음" instead of "~한다/~했다".
-  - OK: "DLM의 attention sink가 ARM과 달리 denoising step마다 dynamically shift함"
-  - NG: "DLM의 attention sink가 ARM과 달리 denoising step마다 dynamically shift한다"
-- **Base sentence in Korean**, keep technical terms / proper nouns / method names / metric names in English as-is.
-  - OK: "기존 ARM은 BOS token에 attention이 고정되는데, DLM은 step마다 sink position이 바뀜"
-  - NG: "확산 언어 모델의 주의 집중 싱크가 자기회귀 모델과 달리..." (awkward translation forbidden)
-- **Do not translate**: model name, method name, dataset name, metric name, loss function, architecture terms (transformer, attention, embedding, etc.), abbreviations (LLM, DLM, ARM, BLEU, PPL, etc.).
-- **Write in Korean**: conjunctions, particles, general verbs/adjectives, sentence structure ("~를 제안함", "~에 비해 ~% 향상됨", "~라는 한계가 있음").
+Default summary voice: **English prose, third-person, concise and technical** (the style a researcher would use in a conference talk or a lab notebook). Write the paper summary in English.
+
+- **Tone**: third-person, declarative, present tense. No filler ("basically", "interestingly", "we see that ..."). State what the paper does / shows / claims.
+  - OK: "Shows empirically that the attention sink shifts with every denoising step in DLMs, unlike ARMs."
+  - NG: "Basically, the paper is interesting because it looks at how the attention sink behaves."
+- **Keep technical terms in their canonical form**: model names, method names, dataset names, metric names, loss functions, architecture terms (transformer, attention, embedding, ...), and abbreviations (LLM, DLM, ARM, BLEU, PPL, ...). Do not translate them.
+- **Do not paraphrase equations or numbers**. Quote digest values verbatim.
 - Section headers stay in English (Marp template fixed).
 
 ## Critical-extraction principles

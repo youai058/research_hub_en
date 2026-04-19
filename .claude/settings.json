@@ -24,7 +24,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/home/irteam/sw/research_hub/.claude/hooks/session_start.sh"
+            "command": "/home1/irteam/sw/research_hub_en/.claude/hooks/session_start.sh"
           }
         ]
       },
@@ -32,7 +32,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/home/irteam/sw/research_hub/.claude/hooks/inject_lessons.sh full"
+            "command": "/home1/irteam/sw/research_hub_en/.claude/hooks/inject_lessons.sh full"
           }
         ]
       }
@@ -42,7 +42,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/home/irteam/sw/research_hub/.claude/hooks/inject_lessons.sh titles"
+            "command": "/home1/irteam/sw/research_hub_en/.claude/hooks/inject_lessons.sh titles"
           }
         ]
       }
@@ -52,7 +52,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/home/irteam/sw/research_hub/.claude/hooks/phase_advance_check.sh"
+            "command": "/home1/irteam/sw/research_hub_en/.claude/hooks/phase_advance_check.sh"
           }
         ]
       }
@@ -63,7 +63,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/home/irteam/sw/research_hub/.claude/hooks/mark_indices_stale.sh"
+            "command": "/home1/irteam/sw/research_hub_en/.claude/hooks/mark_indices_stale.sh"
           }
         ]
       }
@@ -74,15 +74,15 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/home/irteam/sw/research_hub/.claude/hooks/protect_chroma.sh"
+            "command": "/home1/irteam/sw/research_hub_en/.claude/hooks/protect_chroma.sh"
           },
           {
             "type": "command",
-            "command": "/home/irteam/sw/research_hub/.claude/hooks/protect_kg.sh"
+            "command": "/home1/irteam/sw/research_hub_en/.claude/hooks/protect_kg.sh"
           },
           {
             "type": "command",
-            "command": "/home/irteam/sw/research_hub/.claude/hooks/guard_empty_rag.sh"
+            "command": "/home1/irteam/sw/research_hub_en/.claude/hooks/guard_empty_rag.sh"
           }
         ]
       },
@@ -91,7 +91,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/home/irteam/sw/research_hub/.claude/hooks/protect_external_paths.sh"
+            "command": "/home1/irteam/sw/research_hub_en/.claude/hooks/protect_external_paths.sh"
           }
         ]
       }
@@ -99,7 +99,7 @@
   },
   "statusLine": {
     "type": "command",
-    "command": "python3 /home/irteam/sw/research_hub/.claude/scripts/loop_state.py status --short"
+    "command": "python3 /home1/irteam/sw/research_hub_en/.claude/scripts/loop_state.py status --short"
   },
   "skipDangerousModePermissionPrompt": true,
   "enabledPlugins": {

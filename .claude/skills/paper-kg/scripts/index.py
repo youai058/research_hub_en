@@ -39,7 +39,7 @@ from schema import (  # noqa: E402
 )
 from pydantic import ValidationError  # noqa: E402
 
-KST = timezone(timedelta(hours=9))
+UTC = timezone.utc
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
 VDB_DIR = REPO_ROOT / "papers" / "vector_db"
@@ -61,8 +61,8 @@ SCAN_ROOTS = (
 )
 
 
-def now_kst() -> str:
-    return datetime.now(KST).isoformat(timespec="seconds")
+def now_iso() -> str:
+    return datetime.now(UTC).isoformat(timespec="seconds")
 
 
 def sha256_file(path: Path) -> str:
@@ -117,7 +117,7 @@ def reject(path: Path, reason: str, detail: str | None = None) -> None:
     append_jsonl(
         REJECTED_PATH,
         {
-            "rejected_at": now_kst(),
+            "rejected_at": now_iso(),
             "source_file": str(path.relative_to(REPO_ROOT)),
             "reason": reason,
             "detail": detail,
@@ -149,7 +149,7 @@ def upsert_file(
     """
     rel = str(abs_path.relative_to(REPO_ROOT))
     author = author_agent_override or kg.author_agent
-    now = now_kst()
+    now = now_iso()
 
     cur_nodes = kgdb.node_count(conn)
 
@@ -339,7 +339,7 @@ def cmd_run(
                 "sha256": sha256_file(p),
                 "mtime": p.stat().st_mtime,
             }
-        manifest["last_update"] = now_kst()
+        manifest["last_update"] = now_iso()
         save_manifest(manifest)
         # H4: --rebuild-manifest must clear the stale flag, otherwise the
         # SessionStart hook keeps reporting the KG as stale forever.
@@ -393,7 +393,7 @@ def cmd_run(
         append_jsonl(
             LOG_PATH,
             {
-                "ts": now_kst(),
+                "ts": now_iso(),
                 "action": "upsert",
                 "source_file": rel,
                 "nodes": n,
@@ -413,7 +413,7 @@ def cmd_run(
             append_jsonl(
                 LOG_PATH,
                 {
-                    "ts": now_kst(),
+                    "ts": now_iso(),
                     "action": "drop",
                     "source_file": rel,
                     "nodes_dropped": nodes_d,
@@ -423,7 +423,7 @@ def cmd_run(
             )
 
     if not dry_run:
-        manifest["last_update"] = now_kst()
+        manifest["last_update"] = now_iso()
         save_manifest(manifest)
         # Clear stale flag only on *fully successful* ingest.
         # If any file was rejected, keep .stale so the next SessionStart still

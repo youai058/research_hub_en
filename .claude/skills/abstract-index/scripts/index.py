@@ -22,7 +22,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
-KST = timezone(timedelta(hours=9))
+UTC = timezone.utc
 COLLECTION = "abstracts"
 EMBED_MODEL = "BAAI/bge-m3"
 FRONTMATTER_RE = re.compile(r"^---\n(.*?)\n---\n", re.DOTALL)
@@ -120,7 +120,7 @@ def load_manifest(path: Path) -> dict:
 
 
 def save_manifest(path: Path, manifest: dict) -> None:
-    manifest["last_update"] = datetime.now(KST).isoformat(timespec="seconds")
+    manifest["last_update"] = datetime.now(UTC).isoformat(timespec="seconds")
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
 

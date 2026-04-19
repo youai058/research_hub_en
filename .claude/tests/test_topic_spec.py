@@ -19,11 +19,11 @@ def _valid_payload() -> dict:
     return {
         "version": 1,
         "created": "2026-04-16T19:30:00+09:00",
-        "raw_input": "Diffusion LLM 분석 논문",
-        "refined_topic": "Diffusion LM의 training/sampling 분석 논문 수집",
+        "raw_input": "Diffusion LLM analysis papers",
+        "refined_topic": "Collect papers analyzing Diffusion LM training/sampling",
         "triage_context": {
-            "core_question": "Diffusion LM 분석 논문인가?",
-            "include": ["Discrete/masked diffusion을 text generation에 적용"],
+            "core_question": "Is this a Diffusion LM analysis paper?",
+            "include": ["Discrete/masked diffusion applied to text generation"],
             "exclude": ["Image/audio diffusion"],
             "signal_methods": ["MDLM", "LLaDA"],
         },
@@ -99,7 +99,7 @@ def test_get_nested_field() -> None:
         path = f.name
     res = _run(["get", path, "triage_context.core_question"])
     assert res.returncode == 0, res.stderr
-    assert res.stdout.strip() == "Diffusion LM 분석 논문인가?"
+    assert res.stdout.strip() == "Is this a Diffusion LM analysis paper?"
 
 
 def test_get_list_field_as_jsonl() -> None:
@@ -138,7 +138,7 @@ def test_report_builder_papers_body_includes_topic_json_fields() -> None:
     spec.loader.exec_module(rb)
 
     body = {
-        "refined_topic": "Diffusion LM 분석 논문 수집",
+        "refined_topic": "Collect Diffusion LM analysis papers",
         "clarity_scores": {"scope": 0.85, "triage": 0.80, "keywords": 0.75},
         "interview_rounds": 3,
         "termination_reason": "floor",
@@ -149,7 +149,7 @@ def test_report_builder_papers_body_includes_topic_json_fields() -> None:
         "kg_delta": {},
     }
     out = rb._body_papers_md(body)
-    assert "Diffusion LM 분석 논문 수집" in out, "refined_topic not rendered"
+    assert "Collect Diffusion LM analysis papers" in out, "refined_topic not rendered"
     assert "0.85" in out and "0.80" in out and "0.75" in out, "clarity_scores not rendered"
     assert "floor" in out, "termination_reason not rendered"
     assert "3" in out, "interview_rounds not rendered"

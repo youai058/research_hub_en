@@ -85,12 +85,12 @@ from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Any
 
-KST = timezone(timedelta(hours=9))
+UTC = timezone.utc
 VALID_STAGES = {"papers", "qa", "experiments", "analyze"}
 
 
-def now_kst() -> str:
-    return datetime.now(KST).isoformat(timespec="seconds")
+def now_iso() -> str:
+    return datetime.now(UTC).isoformat(timespec="seconds")
 
 
 def find_root(explicit: str | None) -> Path:
@@ -116,7 +116,7 @@ def _md_header(payload: dict[str, Any]) -> str:
         f"slug: {payload['slug']}",
         f"stage_version: {payload['stage_version']}",
         f"started_at: {payload.get('started_at', '')}",
-        f"completed_at: {payload.get('completed_at', now_kst())}",
+        f"completed_at: {payload.get('completed_at', now_iso())}",
         f"plan_path: {payload.get('plan_path', '')}",
         f"sub_phase_trace: {json.dumps(sub_trace, ensure_ascii=False)}",
         f"status: {payload.get('status', 'success')}",
@@ -129,7 +129,7 @@ def _marp_header(payload: dict[str, Any]) -> str:
     stage = payload["stage"]
     slug = payload["slug"]
     ver = payload["stage_version"]
-    completed = payload.get("completed_at") or now_kst()
+    completed = payload.get("completed_at") or now_iso()
     return (
         "---\n"
         "marp: true\n"
@@ -473,7 +473,7 @@ def _slides_common_opening(payload: dict[str, Any], title_suffix: str) -> str:
         f"# {payload['stage']} Report — {payload['slug']} v{payload['stage_version']}\n\n"
         f"{title_suffix}\n\n"
         f"Status: **{payload.get('status','?')}** · "
-        f"Completed: {payload.get('completed_at', now_kst())}\n\n"
+        f"Completed: {payload.get('completed_at', now_iso())}\n\n"
         "---\n\n"
     )
 

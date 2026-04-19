@@ -28,7 +28,7 @@ order is fixed `openreview → anthology → arxiv` so that whitelist venue
 labels are stamped first, and arXiv re-discoveries of the same paper are
 dropped by the global dedup table. The year list preserves user-supplied
 ordering (so `--years 2026 2025 2024` scans newest first); if `--years` is
-omitted, it defaults to `[today.year, -1, -2]` in KST. The global dedup
+omitted, it defaults to `[today.year, -1, -2]` in UTC. The global dedup
 table (normalized title + arxiv/openreview/anthology id) is preserved
 **across year buckets** — a paper seen in the 2026 bucket is not
 re-emitted in 2025/2024.
@@ -68,7 +68,7 @@ except ImportError:
 
 from classify_route import classify_route, CANONICAL, WHITELIST  # noqa: E402
 
-KST = datetime.timezone(datetime.timedelta(hours=9))
+UTC = datetime.timezone.utc
 
 # Gate for non-whitelist (venue_class == "etc") emissions from openreview
 # and anthology scans. Flipped True by main() when --include-arxiv is passed;
@@ -102,8 +102,8 @@ WHITELIST_ORDER = (
 
 
 def default_years() -> list[int]:
-    """Default 3-year rolling window in KST, newest first."""
-    y = datetime.datetime.now(KST).year
+    """Default 3-year rolling window in UTC, newest first."""
+    y = datetime.datetime.now(UTC).year
     return [y, y - 1, y - 2]
 
 
@@ -149,8 +149,8 @@ def sha256_file(p: Path) -> str:
     return hashlib.sha256(p.read_bytes()).hexdigest()
 
 
-def now_kst() -> str:
-    return datetime.datetime.now(KST).isoformat(timespec="seconds")
+def now_iso() -> str:
+    return datetime.datetime.now(UTC).isoformat(timespec="seconds")
 
 
 def load_manifest(path: Path) -> dict:
@@ -247,7 +247,7 @@ def write_raw(
         "categories": categories or [],
         "keywords": keywords or [],
         "venue_source": venue_source or "",
-        "hunter_fetched": now_kst(),
+        "hunter_fetched": now_iso(),
     }
     fm_yaml = "---\n"
     for k, v in fm.items():
@@ -389,7 +389,7 @@ def hunt_arxiv_year(
                 break
 
     manifest.setdefault("cursors", {})[f"arxiv:{year}:{','.join(keywords)}"] = {
-        "last_run": now_kst(),
+        "last_run": now_iso(),
         "year": year,
     }
     return emitted
@@ -542,7 +542,7 @@ def hunt_openreview_year(
             time.sleep(0.2)
 
         manifest.setdefault("cursors", {})[f"openreview:{venue_id}"] = {
-            "last_run": now_kst(),
+            "last_run": now_iso(),
         }
     return emitted
 
@@ -652,7 +652,7 @@ def hunt_anthology_year(
 
         print(f"[anthology][{year}] {event}-{year}: {paper_count} papers scanned", flush=True)
         manifest.setdefault("cursors", {})[f"anthology:{event}:{year}"] = {
-            "last_run": now_kst(),
+            "last_run": now_iso(),
             "year": year,
         }
     return emitted
@@ -691,7 +691,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--years", nargs="*", type=int, default=None,
                     help="Year buckets to scan, in scan-priority order "
                          "(newest first recommended). Defaults to "
-                         "[today.year, today.year-1, today.year-2] in KST.")
+                         "[today.year, today.year-1, today.year-2] in UTC.")
     ap.add_argument("--date-from", default=None,
                     help="arXiv date lower bound YYYY-MM-DD. Ignored when --years is set "
                          "(year range takes precedence). Kept for backward compat.")
@@ -825,7 +825,7 @@ def main(argv: list[str] | None = None) -> int:
             "mtime": int(path.stat().st_mtime),
             "normalized_title": norm_title(_read_title(path)),
         }
-    manifest["last_update"] = now_kst()
+    manifest["last_update"] = now_iso()
 
     if args.dry_run:
         print(f"[dry-run] would update manifest with {len(all_emitted)} new files")

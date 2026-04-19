@@ -47,7 +47,7 @@ PROMPT_VERSION = "v7"
 GEMINI_MODEL = "gemini-3-pro-preview"
 GEMINI_TIMEOUT_SEC = 600
 MIN_FULLTEXT_CHARS = 3000
-KST = _dt.timezone(_dt.timedelta(hours=9))
+UTC = _dt.timezone.utc
 FIGURE_DPI_MATRIX = 3  # ~216 DPI at fitz default 72 DPI
 FIGURE_MIN_BYTES = 10 * 1024  # 10KB sanity threshold
 FIGURE_MIN_HEIGHT_FRAC = 0.10  # refined bbox must be >=10% of page height
@@ -135,8 +135,8 @@ def _log(msg: str) -> None:
     print(f"[gemini_digest] {msg}", file=sys.stderr, flush=True)
 
 
-def _now_kst_iso() -> str:
-    return _dt.datetime.now(KST).strftime("%Y-%m-%dT%H:%M:%S%z")
+def _now_iso() -> str:
+    return _dt.datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S%z")
 
 
 def _fail(code: int, msg: str) -> None:
@@ -672,7 +672,7 @@ def _write_digest(
         "---",
         f'source_raw: "{raw_md_path.as_posix()}"',
         f'source_pdf_sha256: "{pdf_sha}"',
-        f'generated_at: "{_now_kst_iso()}"',
+        f'generated_at: "{_now_iso()}"',
         f'model: "{GEMINI_MODEL}"',
         f'prompt_version: "{PROMPT_VERSION}"',
         f'slug: "{_slug_from_raw(raw_md_path, meta)}"',

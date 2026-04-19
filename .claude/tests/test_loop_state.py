@@ -51,13 +51,13 @@ def test_empty_state_is_v3() -> None:
 
 
 def test_is_trigger_phrase() -> None:
-    assert ls.is_trigger_phrase("구현해줘")
+    assert ls.is_trigger_phrase("proceed")
     assert ls.is_trigger_phrase("  proceed  ")
     assert ls.is_trigger_phrase("GO AHEAD")
     assert ls.is_trigger_phrase("run it")
     assert not ls.is_trigger_phrase("maybe")
     assert not ls.is_trigger_phrase("")
-    assert not ls.is_trigger_phrase("그만")
+    assert not ls.is_trigger_phrase("stop")
     print("[ok] is_trigger_phrase")
 
 
@@ -125,7 +125,7 @@ def test_inner_phase_advance_needs_trigger() -> None:
             raise AssertionError("B→C without trigger must fail")
 
         # B → C with whitelisted trigger: OK.
-        ns = argparse.Namespace(root=str(root), to="C", trigger="구현해줘", force=False)
+        ns = argparse.Namespace(root=str(root), to="C", trigger="proceed", force=False)
         rc = ls.cmd_stage_advance(ns)
         assert rc == 0
         state = ls.load_state(sp)
