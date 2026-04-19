@@ -7,14 +7,14 @@ Trigger the paper-triage agent to run a relevance pass over `papers/metadata/**/
 
 ## Dispatch
 
-이 커맨드는 **paper-triage 에이전트를 Task tool로 실제 dispatch** 한다. orchestrator/클로드는 다음을 수행한다:
+This command **actually dispatches the paper-triage agent via the Task tool**. The orchestrator / Claude does the following:
 
-1. `$ARGUMENTS`를 그대로 subagent 프롬프트에 전달.
-2. `Task(subagent_type="paper-triage", description="Relevance triage over raw.md pool", prompt="<forwarded $ARGUMENTS + usage context>")` 호출.
-3. 에이전트 stdout의 accepted path 목록과 stderr의 `scanned=N accepted=M threshold=F` stat을 회수해 호출자에 반환한다.
-4. `--no-save-topic`이 없으면 에이전트가 `research/topics/<slug>.md`에 run 엔트리를 append했는지 확인한다.
+1. Forward `$ARGUMENTS` verbatim into the subagent prompt.
+2. Call `Task(subagent_type="paper-triage", description="Relevance triage over raw.md pool", prompt="<forwarded $ARGUMENTS + usage context>")`.
+3. Collect the accepted-path list from the agent's stdout and the `scanned=N accepted=M threshold=F` stats from stderr, and return them to the caller.
+4. Unless `--no-save-topic` is given, verify that the agent appended a run entry to `research/topics/<slug>.md`.
 
-에이전트 정의는 `.claude/agents/paper-triage.md`, 스킬 계약은 `.claude/skills/paper-triage/SKILL.md`.
+Agent definition: `.claude/agents/paper-triage.md`. Skill contract: `.claude/skills/paper-triage/SKILL.md`.
 
 ## Usage
 

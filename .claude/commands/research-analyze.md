@@ -50,7 +50,7 @@ Do NOT self-advance to Phase B or C.
 
 ## Step 4 — Phase B: present PLAN and user gate
 
-Print PLAN.md path, 3-line summary, prerequisite warning (if any), and "PLAN.md 검토 후 피드백 주시거나, 이대로 진행하려면 `구현해줘` / `proceed` 같은 트리거 phrase로 응답해주세요."
+Print PLAN.md path, 3-line summary, prerequisite warning (if any), and "After reviewing PLAN.md, either give feedback or reply with a trigger phrase like `proceed` or `go ahead` to continue."
 
 **Hard stop.** When user responds, check via `python3 /home/irteam/sw/research_hub/.claude/scripts/loop_state.py trigger-check "<phrase>"`. If whitelisted, advance to C:
 ```bash

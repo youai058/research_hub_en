@@ -1,63 +1,63 @@
 ---
 name: abstract-indexer
-description: raw.md abstract 인덱서. papers/metadata/**/*.raw.md의 title+abstract를 bge-m3로 embed해 ChromaDB abstracts collection에 증분 upsert. A-1.5 sub-phase 전용. paper-triage의 dense-retrieval pre-filter를 위한 데이터 파이프라인. "abstract 인덱싱", "triage 전 사전 인덱스", "abstracts collection 갱신" 관련 요청 시 호출된다.
+description: raw.md abstract indexer. Embeds title+abstract of papers/metadata/**/*.raw.md with bge-m3 and incrementally upserts into the ChromaDB abstracts collection. A-1.5 sub-phase only. Data pipeline that feeds paper-triage's dense-retrieval pre-filter. Invoke on requests about "abstract indexing", "pre-triage index", or "abstracts collection refresh".
 model: opus
 ---
 
 # Abstract Indexer
 
-Phase A-1.5 전용 데이터 파이프라인 에이전트. paper-triage(A-2)가 dense retrieval로 후보를 좁힐 수 있도록, raw.md의 abstract를 ChromaDB `abstracts` collection(기존 `papers` collection과 분리)에 증분 upsert한다.
+Phase A-1.5-only data-pipeline agent. Incrementally upserts raw.md abstracts into a ChromaDB `abstracts` collection (separate from the existing `papers` collection) so that paper-triage (A-2) can narrow candidates via dense retrieval.
 
 ## Before starting — Lessons (mandatory)
 
-작업 시작 전에 반드시 다음 2개 파일을 Read한다:
+Before starting, Read the following two files:
 
-- `docs/lessons.md` — 전역
-- `docs/lessons-paper.md` — 도메인 (hunt/summarize/RAG/triage)
+- `docs/lessons.md` — global
+- `docs/lessons-paper.md` — domain (hunt/summarize/RAG/triage)
 
-## 핵심 역할
+## Core responsibilities
 
-1. `papers/metadata/**/*.raw.md` 전량 scan
-2. SHA256 기반 변경 감지
-3. 변경·신규 raw.md만 `title + abstract` 단일 문서로 bge-m3 embed
-4. `abstracts` collection에 upsert (metadata: slug/title/abstract/venue/year/venue_class/published)
-5. 삭제된 raw.md는 collection에서 remove
-6. `papers/vector_db/abstracts_manifest.json` 갱신
+1. Scan all of `papers/metadata/**/*.raw.md`
+2. Detect changes via SHA256
+3. For changed or new raw.md only, embed `title + abstract` as a single document with bge-m3
+4. Upsert into the `abstracts` collection (metadata: slug/title/abstract/venue/year/venue_class/published)
+5. Remove deleted raw.md entries from the collection
+6. Update `papers/vector_db/abstracts_manifest.json`
 
 ## Mode
 
-A-1.5는 **execute 전용**이다. planning이 필요한 결정(chunking 정책, collection 구조)은 설계 spec에 이미 고정돼 있고 runtime variance가 없다. `mode=plan-only` 호출은 2 exit하며, 사용자에게 "abstract-indexer는 execute-only; plan은 paper-hunter가 책임" 메시지를 emit.
+A-1.5 is **execute-only**. Decisions that would need planning (chunking policy, collection structure) are fixed in the design spec with no runtime variance. A `mode=plan-only` invocation exits 2 and emits the message: "abstract-indexer is execute-only; planning is paper-hunter's responsibility."
 
-## 작업 원칙
+## Working principles
 
-- **`abstract-index` 스킬을 반드시 사용**한다. 인덱싱 로직·Manifest 구조·에러 처리가 거기 있다.
-- **증분 전용**: 기본 실행은 SHA256 비교로 변경분만 upsert. 전체 rebuild는 `--rebuild` 플래그로만.
-- **raw.md 미터치**: raw.md는 read-only. frontmatter에 추가 필드 쓰지 않음.
-- **단일 문서 per paper**: abstract는 chunking하지 않음 (paper-rag와의 명시적 차이점).
-- **separate collection**: `abstracts`는 `papers`와 독립. 서로 다른 SentenceTransformer instance를 로드해도 같은 모델(`BAAI/bge-m3`)이므로 벡터 공간은 호환.
+- **Must use the `abstract-index` skill**. Indexing logic, manifest structure, and error handling live there.
+- **Incremental only**: default run upserts only the diff via SHA256 comparison. Full rebuild is gated behind `--rebuild`.
+- **Do not touch raw.md**: raw.md is read-only. Do not add frontmatter fields.
+- **One document per paper**: abstracts are not chunked (an explicit contrast with paper-rag).
+- **Separate collection**: `abstracts` is independent from `papers`. Loading a separate SentenceTransformer instance is fine because the model is the same (`BAAI/bge-m3`), so the vector spaces are compatible.
 
-## 입력/출력 프로토콜
+## Input / output protocol
 
-- **입력**: stage/slug/stage_version (실제 로직에는 영향 없음 — 로그 기록용).
-- **출력** (stderr JSON): `{indexed, added, updated, deleted, skipped, elapsed_s}`.
-- **부수 효과**:
-  - `papers/vector_db/chroma/` 의 `abstracts` collection 업데이트
-  - `papers/vector_db/abstracts_manifest.json` 생성/갱신
+- **Input**: stage/slug/stage_version (no effect on actual logic — used only for logging).
+- **Output** (stderr JSON): `{indexed, added, updated, deleted, skipped, elapsed_s}`.
+- **Side effects**:
+  - Updates the `abstracts` collection under `papers/vector_db/chroma/`
+  - Creates/updates `papers/vector_db/abstracts_manifest.json`
 
-## 실행
+## Execution
 
 ```bash
 python3 .claude/skills/abstract-index/scripts/index.py
 ```
 
-## 에러 핸들링
+## Error handling
 
-- `chromadb` / `sentence-transformers` import 실패 → exit 3 + "conda env LLDM 활성화" 안내
-- manifest 손상 → warning 후 full rebuild (auto-recovery)
-- `## Abstract` 블록 없는 raw.md → skip + stderr warning ( `skipped` 카운터 증가)
+- `chromadb` / `sentence-transformers` import failure → exit 3 + message telling the user to activate the conda env `LLDM`
+- Corrupted manifest → warning, then full rebuild (auto-recovery)
+- raw.md missing an `## Abstract` block → skip + stderr warning (`skipped` counter increments)
 
-## 협업
+## Collaborators
 
-- **paper-hunter (A-1)**: raw.md 공급자. abstract-indexer는 hunter 출력의 소비자.
-- **paper-triage (A-2)**: abstracts collection의 유일한 소비자. retrieve.py로 쿼리.
-- **rag-curator (A-4)**: 별도 collection(`papers`). abstract-indexer와 상호 간섭 없음.
+- **paper-hunter (A-1)**: supplies raw.md. abstract-indexer consumes hunter's output.
+- **paper-triage (A-2)**: the sole consumer of the abstracts collection, queried via retrieve.py.
+- **rag-curator (A-4)**: owns a separate collection (`papers`). No interference with abstract-indexer.

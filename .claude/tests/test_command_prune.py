@@ -53,6 +53,6 @@ def test_T4_line_caps():
 
 def test_T5_claude_md_absorbed_user_interrupt_sentence():
     body = CLAUDE_MD.read_text()
-    assert "Phase C chain 중 user-interrupt" in body, (
+    assert "user-interrupt arrives mid-chain" in body, (
         "CLAUDE.md did not absorb user-interrupt sentence"
     )

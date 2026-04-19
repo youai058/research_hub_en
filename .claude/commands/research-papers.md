@@ -26,9 +26,9 @@ python3 /home/irteam/sw/research_hub/.claude/skills/topic-refine/scripts/topic_s
     validate /home/irteam/sw/research_hub/research/topics/.pending.topic.json
 ```
 
-**Halting rules**: On user interrupt (Ctrl+C/"취소") or validation fail, stop and `rm -f /home/irteam/sw/research_hub/research/topics/.pending.topic.json` before exit.
+**Halting rules**: On user interrupt (Ctrl+C / "cancel") or validation fail, stop and `rm -f /home/irteam/sw/research_hub/research/topics/.pending.topic.json` before exit.
 
-**Skip interview**: if `--slug <existing>` with pre-existing spec, or user types trigger phrase ("proceed"/"진행해줘") on first prompt.
+**Skip interview**: if `--slug <existing>` with pre-existing spec, or user types a trigger phrase ("proceed" / "go ahead") on the first prompt.
 
 ## Step 2 — Enter the stage (allocate v<N>)
 
@@ -44,7 +44,7 @@ Print:
 1. PLAN.md absolute path
 2. 3-line summary (goal + expected artifacts + success criteria)
 3. Prerequisite warning block (if any)
-4. "PLAN.md 검토 후 피드백 주시거나, 이대로 진행하려면 `구현해줘` / `proceed` 같은 트리거 phrase로 응답해주세요."
+4. "After reviewing PLAN.md, either give feedback or reply with a trigger phrase like `proceed` or `go ahead` to continue."
 
 **Hard stop here.** Do not call `stage-advance --to C` without an explicit trigger phrase from the user.
 

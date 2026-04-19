@@ -58,7 +58,7 @@ Do NOT self-advance to Phase B or C.
 
 ## Step 5 — Phase B: user alignment and trigger gate
 
-Print PLAN.md absolute path, 3-line summary, prerequisite warning (if any), and "PLAN.md 검토 후 피드백 주시거나, 이대로 진행하려면 `구현해줘` / `proceed` 같은 트리거 phrase로 응답해주세요."
+Print PLAN.md absolute path, 3-line summary, prerequisite warning (if any), and "After reviewing PLAN.md, either give feedback or reply with a trigger phrase like `proceed` or `go ahead` to continue."
 
 **Hard stop here.** Do not call `stage-advance --to C` without an explicit trigger phrase from the user.
 
@@ -92,7 +92,7 @@ python3 /home/irteam/sw/research_hub/.claude/scripts/loop_state.py stage-advance
 
 **B-2 — critic AND codex-reviewer in parallel**
 
-Dispatch **both** agents in a SINGLE main-session message (parallel; they must not see each other's output — `critic.md` §병렬 규칙).
+Dispatch **both** agents in a SINGLE main-session message (parallel; they must not see each other's output — `critic.md` §Parallelism rule).
 
 Snapshot: `python3 .claude/scripts/verify_sub_phase.py snapshot B-2-critic --slug <slug> && python3 .claude/scripts/verify_sub_phase.py snapshot B-2-codex --slug <slug>`
 
