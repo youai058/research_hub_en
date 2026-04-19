@@ -34,3 +34,8 @@ __pycache__/
 # Secrets
 .env
 .env.*
+.gemini/
+**/oauth_creds.json
+**/google_accounts.json
+*.credentials.json
+*_credentials.json
