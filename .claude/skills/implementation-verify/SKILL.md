@@ -1,75 +1,75 @@
 ---
 name: implementation-verify
-description: "구현 incremental QA. PLAN.md↔IMPL_MAP.md 경계면 교차 비교(IV/DV/metric shape), smoke test, edge case, 실패 시 implementer 피드백. implementation-verifier 전용. 트리거: '구현 검증', 'QA', 'smoke test', 'boundary check'."
+description: "Incremental QA of an implementation. PLAN.md ↔ IMPL_MAP.md cross-boundary comparison (IV/DV/metric shape), smoke test, edge cases, feedback to implementer on failure. Owned by implementation-verifier. Triggers: 'verify implementation', 'QA', 'smoke test', 'boundary check'."
 ---
 
 # Implementation Verify Skill
 
-**경계면 교차 비교 + 실행 증명** 기반 QA. 존재 확인을 넘어 shape 일치와 실제 동작을 확인한다.
+QA based on **cross-boundary comparison + proof of execution**. Goes beyond existence checks to verify shape matching and actual behavior.
 
-## 입력
+## Input
 
 - `research/plans/<slug>/PLAN.md`
 - `experiments/<slug>/IMPL_MAP.md`
-- code-implementer가 SendMessage로 전달한 **변경 파일 목록**
+- The **list of changed files** code-implementer sends via SendMessage
 
-## 4단계 검증
+## 4-step verification
 
 ### 1. Mapping Completeness
 
-- PLAN.md의 모든 `[ ]` 항목이 IMPL_MAP.md에 존재하는가?
-- IMPL_MAP의 모든 매핑이 실제 파일·함수·라인을 가리키는가?
-- 누락 → **실패**: "PLAN §3.2 'Ablation A1' not mapped in IMPL_MAP"
+- Does every `[ ]` item in PLAN.md exist in IMPL_MAP.md?
+- Do all IMPL_MAP mappings point to real files / functions / lines?
+- Missing → **fail**: "PLAN §3.2 'Ablation A1' not mapped in IMPL_MAP"
 
 ### 2. Boundary Crossing Check (Evidence-aware)
 
-PLAN의 IV/DV/metric과 실제 코드 타입을 교차 비교한다. **존재가 아니라 shape**이 핵심. 추가로 **Evidence verification 충실도**를 확인한다.
+Cross-compare PLAN IV/DV/metric against actual code types. Key is **shape, not existence**. Also check **Evidence-verification fidelity**.
 
-예:
+Example:
 - PLAN: "DV = accuracy (scalar, 0-100)"
 - IMPL: `def compute_accuracy(preds, labels) -> float`
-- 통과: float 스칼라 맞음
+- Pass: float scalar matches
 
-반례:
+Counter-example:
 - PLAN: "DV = latency (ms, per-sample)"
 - IMPL: `def compute_latency(batch) -> float  # batch avg`
-- 실패: "PLAN expects per-sample but IMPL returns batch average"
+- Fail: "PLAN expects per-sample but IMPL returns batch average"
 
-**Evidence verification boundary (신규, 필수)**:
-- PLAN §E<i>의 `verification metric`과 IMPL_MAP의 `Verification metric` 컬럼이 일치하는가?
-- 각 Experiment가 **정확히 하나의** Evidence id를 가리키는가? (IMPL_MAP의 Evidence ↔ Experiment 1:1 확인)
-- `decide_verdict()` 함수가 PLAN의 `Expected Under / If Wrong` 범위와 동일 수치로 CONFIRMED/REFUTED/INCONCLUSIVE를 결정하는가?
+**Evidence-verification boundary (new, required)**:
+- Does PLAN §E<i>'s `verification metric` match IMPL_MAP's `Verification metric` column?
+- Does each Experiment point to **exactly one** Evidence id? (confirm IMPL_MAP Evidence ↔ Experiment 1:1)
+- Does `decide_verdict()` decide CONFIRMED/REFUTED/INCONCLUSIVE using the same numbers as PLAN's `Expected Under / If Wrong`?
   - PLAN: Expected Under [0.75, 0.95], If Wrong < 0.55
   - IMPL: `if metric >= 0.75: return "CONFIRMED"; elif metric < 0.55: return "REFUTED"; else: return "INCONCLUSIVE"`
-  - 수치가 어긋나면 실패 (F-1에서 잘못된 판정)
+  - If numbers diverge, fail (wrong verdict at F-1)
 
-### 3. Smoke Test (실제 실행 증명)
+### 3. Smoke Test (proof of actual execution)
 
-- Minimal sample 1개로 해당 모듈 호출
-- 기대 출력 shape·range 검증
-- 예외 없이 통과해야 함
+- Call the module with a single minimal sample
+- Verify expected output shape / range
+- Must pass without exceptions
 
 ```python
-# 예시
+# Example
 from experiments.slug.code.data.loader import load_dataset, split
 ds = load_dataset(debug=True, max_samples=4)
 tr, va, te = split(ds, ratios=(0.5, 0.25, 0.25))
 assert len(tr) == 2 and len(va) == 1 and len(te) == 1
 ```
 
-- dry-run 금지: 실제로 데이터 흐름 확인
-- synthetic sample로 충분. 전체 데이터셋 로드 금지(시간 낭비)
+- No dry-run: exercise the actual data flow
+- Synthetic samples are enough. Do NOT load the full dataset (waste of time).
 
-### 4. Edge Case 탐색
+### 4. Edge Case probe
 
-최소 3개 엣지 케이스 시도:
-- 빈 입력 (empty list, zero rows)
-- 단일 샘플 (batch_size=1)
-- 최대 길이 / 큰 값
-- NaN/None/빈 문자열
-- Seed 동일성 (같은 seed → 같은 출력)
+Try at least 3 edge cases:
+- Empty input (empty list, zero rows)
+- Single sample (batch_size=1)
+- Max length / large values
+- NaN / None / empty string
+- Seed equivalence (same seed → same output)
 
-## 실패 시 피드백 포맷
+## Feedback format on failure
 
 SendMessage(code-implementer):
 
@@ -88,9 +88,9 @@ SendMessage(code-implementer):
 Please fix boundary issue and re-request verification.
 ```
 
-**구체성 의무**: "function exists but wrong shape"처럼 막연한 표현 금지. 파일·라인·PLAN 섹션 3개를 모두 인용.
+**Specificity required**: no vague statements like "function exists but wrong shape". Cite file, line, and PLAN section — all three.
 
-## 통과 시
+## On pass
 
 ```
 [PASS] Module X verification
@@ -103,30 +103,30 @@ Please fix boundary issue and re-request verification.
 PLAN checkboxes §2.1-2.3 → [x]. Ready for Module Y.
 ```
 
-## 환경 이슈 처리
+## Environment-issue handling
 
-- Import 에러 → `experiments/<slug>/code/__init__.py` 존재 확인, venv 활성 확인
-- 데이터셋 path 에러 → config의 경로 오타 또는 절대/상대 혼동 지적
-- CUDA OOM → `CUDA_VISIBLE_DEVICES=""` 또는 `device='cpu'`로 smoke test 시도
+- Import error → verify `experiments/<slug>/code/__init__.py` exists; verify venv active
+- Dataset path error → point out a typo in the config or absolute/relative confusion
+- CUDA OOM → try the smoke test with `CUDA_VISIBLE_DEVICES=""` or `device='cpu'`
 
-## Incremental 타이밍
+## Incremental timing
 
-- 모든 모듈 완성 후 1회 일괄 QA → **금지**
-- 각 모듈 완성 직후 즉시 QA → **필수**
-- 실패 시 해당 모듈만 수정 후 재QA. 인접 모듈은 영향 없으면 재검증 skip.
+- Single batch QA after all modules complete → **forbidden**
+- Immediate QA right after each module completes → **required**
+- On failure, fix only that module and re-QA. Skip re-verification of unaffected adjacent modules.
 
-## 실패 모드
+## Failure modes
 
-- venv 손상: 복구 스크립트 또는 사용자 안내
-- PLAN 자체 모호: experiment-planner에 명확화 요청
-- 2회 연속 실패: orchestrator에 보고, 루프 중단 트리거
+- Corrupted venv: recovery script or user guidance
+- Ambiguous PLAN: ask experiment-planner for clarification
+- 2 consecutive failures: report to orchestrator, trigger loop abort
 
-## 체크리스트
+## Checklist
 
-- [ ] IMPL_MAP 존재 확인
+- [ ] IMPL_MAP existence confirmed
 - [ ] Mapping Completeness
-- [ ] Boundary Crossing Check (shape 비교)
-- [ ] Smoke test 실행 (실제 데이터 흐름)
-- [ ] Edge case 3개 이상
-- [ ] Pass/Fail 결정 + 구체 피드백
-- [ ] (통과 시) PLAN 체크박스 `[x]` 갱신 승인
+- [ ] Boundary Crossing Check (shape comparison)
+- [ ] Smoke test executed (actual data flow)
+- [ ] ≥ 3 edge cases
+- [ ] Pass/Fail decision + specific feedback
+- [ ] (On pass) Approve flipping PLAN checkboxes to `[x]`

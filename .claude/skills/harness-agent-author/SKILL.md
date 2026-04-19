@@ -1,105 +1,105 @@
 ---
 name: harness-agent-author
-description: "서브에이전트 페르소나 파일(.claude/agents/{name}.md). 헤더 name·description·model·tools + 섹션(역할·작업원칙·입출력·팀통신·에러핸들링·협업). 트리거: '새 subagent', '에이전트 페르소나', 'agent 정의'."
+description: "Subagent persona file (.claude/agents/{name}.md). Header name·description·model·tools + sections (role / working principles / I/O / team comms / error handling / collaboration). Triggers: 'new subagent', 'agent persona', 'agent definition'."
 ---
 
 # Harness Agent Author
 
-에이전트는 "누가 하는가"를 정의하는 **전문가 페르소나 파일**이다. 스킬은 에이전트가 참조하는 절차적 가이드이며, 두 개념을 섞지 않는다.
+An agent is an **expert persona file** defining "who does it". A skill is a procedural guide the agent references — the two concepts must not be mixed.
 
-## 핵심 원칙
+## Core principle
 
-**모든 에이전트는 반드시 `.claude/agents/{name}.md` 파일로 정의한다.** 빌트인 타입(`general-purpose`, `Explore`, `Plan`)을 사용하더라도 에이전트 정의 파일을 만든다. 이유:
-- 파일이 존재해야 다음 세션에서 재사용 가능
-- 팀 통신 프로토콜이 명시되어야 협업 품질 보장
-- 하네스의 핵심 가치는 "누가(agent)"와 "어떻게(skill)"의 분리
+**Every agent must be defined as a `.claude/agents/{name}.md` file.** Even when using built-in types (`general-purpose`, `Explore`, `Plan`), create the agent definition file. Reasons:
+- The file must exist to be reusable across sessions
+- Team communication protocols must be spelled out to guarantee collaboration quality
+- The harness's core value is separating "who (agent)" from "how (skill)"
 
-## Frontmatter 규약
+## Frontmatter convention
 
 ```yaml
 ---
 name: agent-name
-description: "1-2문장 역할 + 트리거 키워드 나열. orchestrator가 이걸 보고 라우팅한다."
+description: "1–2 sentence role + list of trigger keywords. The orchestrator uses this for routing."
 model: opus
 ---
 ```
 
-- `name`: kebab-case, 파일명과 일치
-- `description`: 트리거 키워드를 풍부하게. orchestrator나 사용자가 이 필드를 보고 호출 여부를 결정
-- `model`: **항상 `opus`**. 하네스 품질은 추론 능력에 직결되며 opus가 최고 품질 보장
-- `tools`: (선택) 특정 도구만 허용할 때. 생략하면 전체 도구 사용 가능
+- `name`: kebab-case, identical to the filename
+- `description`: keyword-rich for triggering. Orchestrator or user decides to invoke based on this
+- `model`: **always `opus`**. Harness quality depends on reasoning — opus delivers the best
+- `tools`: (optional) restrict to specific tools. Omit to allow all
 
-## 본문 필수 섹션
+## Required body sections
 
 ```markdown
-# {Agent Name} — 한 줄 요약
+# {Agent Name} — one-line summary
 
-당신은 [도메인]의 [역할] 전문가다.
+You are the [role] expert in [domain].
 
-## 핵심 역할
+## Core role
 1. ...
 2. ...
 
-## 작업 원칙
-- 원칙1 (Why 포함)
-- 원칙2
+## Working principles
+- principle 1 (include Why)
+- principle 2
 
-## 입력/출력 프로토콜
-- 입력: 어디서 무엇을 받는지
-- 출력: 어디에 무엇을 쓰는지
-- 형식: 파일 포맷, 구조
+## Input / Output protocol
+- Input: where what is received
+- Output: where what is written
+- Format: file format, structure
 
-## 팀 통신 프로토콜   ← 에이전트 팀 모드에서만 필수
-- 메시지 수신: 누구로부터 어떤 메시지를
-- 메시지 발신: 누구에게
-- 작업 요청: 공유 작업 목록에서 어떤 유형
+## Team communication protocol   ← required only in agent-team mode
+- Message receive: from whom, what kind
+- Message send: to whom
+- Work request: what kinds from the shared work list
 
-## 에러 핸들링
-- 실패 시 행동
-- 타임아웃 시 행동
+## Error handling
+- behavior on failure
+- behavior on timeout
 
-## 협업
-- 다른 에이전트와의 경계·관계
+## Collaboration
+- boundaries / relations with other agents
 ```
 
-## QA 에이전트 특수 규약
+## Special rules for QA agents
 
-QA 에이전트를 만들 때:
-- **타입은 `general-purpose`** (Explore는 읽기 전용이라 검증 스크립트 실행 불가)
-- 핵심은 "존재 확인"이 아니라 **"경계면 교차 비교"** — 예: API 응답 shape과 프론트 훅 shape을 동시 읽고 비교
-- 전체 완성 후 1회가 아니라 **모듈 완성 직후 점진적으로 실행** (incremental QA)
+When authoring a QA agent:
+- **Type is `general-purpose`** (Explore is read-only and cannot run verification scripts)
+- Focus is not "existence check" but **"cross-boundary comparison"** — e.g., read API response shape and frontend hook shape simultaneously and compare
+- Run **incrementally after each module completes**, not once at the end (incremental QA)
 
-## 에이전트 분리 기준
+## Agent-split criteria
 
-| 기준 | 분리 | 통합 |
+| Criterion | Split | Combine |
 |---|---|---|
-| 전문성 | 영역이 다르면 분리 | 영역이 겹치면 통합 |
-| 병렬성 | 독립 실행 가능하면 분리 | 순차 종속이면 통합 고려 |
-| 컨텍스트 | 컨텍스트 부담 크면 분리 | 가볍고 빠르면 통합 |
-| 재사용성 | 다른 팀에서도 쓰면 분리 | 이 팀에서만이면 통합 고려 |
+| Expertise | Different domains → split | Overlapping domains → combine |
+| Parallelism | Independently executable → split | Sequentially dependent → consider combining |
+| Context | Heavy context load → split | Lightweight and fast → consider combining |
+| Reuse | Used by other teams → split | Used only by this team → consider combining |
 
-## 스킬 연결 방식
+## Skill-linkage patterns
 
-에이전트가 스킬을 활용하는 3가지:
+Three ways an agent can leverage a skill:
 
-| 방식 | 구현 | 적합한 경우 |
+| Pattern | Implementation | Fit |
 |---|---|---|
-| **Skill 도구 호출** | 프롬프트에 "Skill 도구로 /skill-name 호출" 명시 | 독립 워크플로우, 사용자 호출 가능 |
-| **인라인** | 에이전트 정의 안에 절차를 직접 포함 | 짧고(50줄 이하) 이 에이전트 전용 |
-| **레퍼런스 로드** | Read로 스킬의 references/ 파일 조건부 로드 | 대용량, 조건부 필요 |
+| **Skill tool call** | Prompt states "invoke /skill-name via Skill tool" | Independent workflow, user-invocable |
+| **Inline** | Include the procedure directly in the agent definition | Short (≤ 50 lines) and agent-specific |
+| **Reference load** | Conditionally `Read` files from the skill's `references/` | Bulky, conditionally needed |
 
-## 편집 절차
+## Authoring steps
 
-1. 기존 에이전트 스캔: `.claude/agents/*.md`의 name/description 충돌 검사
-2. `.claude/agents/{name}.md` 작성 (frontmatter + 섹션)
-3. 연결할 스킬이 있다면 본문에 명시적으로 참조
-4. harness-validate로 frontmatter·섹션 검증
+1. Scan existing agents: check `.claude/agents/*.md` for name/description collisions
+2. Write `.claude/agents/{name}.md` (frontmatter + sections)
+3. If linking a skill, reference it explicitly in the body
+4. Validate frontmatter / sections via harness-validate
 
-## 체크리스트
+## Checklist
 
-- [ ] 파일명이 kebab-case이고 frontmatter `name`과 일치
-- [ ] `model: opus` 명시
-- [ ] `description`에 트리거 키워드 풍부
-- [ ] 6개 필수 섹션 (핵심 역할/작업 원칙/입출력/통신/에러/협업) 존재
-- [ ] 다른 에이전트와 경계(협업 섹션)가 명확
-- [ ] 기존 에이전트와 description 중복·충돌 없음
+- [ ] Filename is kebab-case and matches frontmatter `name`
+- [ ] `model: opus` specified
+- [ ] `description` is keyword-rich for triggering
+- [ ] All 6 required sections present (Role / Principles / I/O / Comms / Errors / Collaboration)
+- [ ] Boundaries (Collaboration section) with other agents are clear
+- [ ] No description collision with existing agents

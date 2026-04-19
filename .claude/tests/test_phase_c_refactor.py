@@ -130,18 +130,20 @@ class DocsAgentCountConsistent(unittest.TestCase):
         text = (REPO / "CLAUDE.md").read_text(encoding="utf-8")
         self.assertRegex(
             text,
-            r"14\s*에이전트",
-            "CLAUDE.md §7 must say '14 에이전트' after abstract-indexer addition",
+            r"14\s*agents",
+            "CLAUDE.md §7 must say '14 agents' after abstract-indexer addition",
         )
-        self.assertNotIn(
-            "13 에이전트", text,
-            "CLAUDE.md must no longer say '13 에이전트'",
+        self.assertNotRegex(
+            text,
+            r"13\s*agents",
+            "CLAUDE.md must no longer say '13 agents'",
         )
 
     def test_harness_layout_has_14_agents(self):
         text = (DOCS / "harness-layout.md").read_text(encoding="utf-8")
-        self.assertNotIn(
-            "13 에이전트", text,
+        self.assertNotRegex(
+            text,
+            r"13\s*agents",
             "docs/harness-layout.md must say 14 now",
         )
         self.assertRegex(

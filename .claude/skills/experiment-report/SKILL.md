@@ -1,6 +1,6 @@
 ---
 name: experiment-report
-description: "Phase C tail of the `experiments` stage. Aggregates plan + impl + smoke results into research/reports/experiments/<slug>/v<N>/{Report.md, Report.slides.md} via .claude/scripts/report_builder.py. Runs after E-3 codex-reviewer approves. No agent; orchestrator executes directly. 트리거: 'experiment report 생성', 'experiments Report.md', 'write experiments slides'."
+description: "Phase C tail of the `experiments` stage. Aggregates plan + impl + smoke results into research/reports/experiments/<slug>/v<N>/{Report.md, Report.slides.md} via .claude/scripts/report_builder.py. Runs after E-3 codex-reviewer approves. No agent; orchestrator executes directly. Triggers: 'generate experiment report', 'experiments Report.md', 'write experiments slides'."
 ---
 
 # Experiment Report Skill (Phase C tail of /research-experiments)

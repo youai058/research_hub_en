@@ -1,6 +1,6 @@
 ---
 name: topic-refine
-description: "Socratic interview that turns a vague user topic into a structured `topic.json` spec before `/research-papers` Phase A. 3 perspectives (Scope Definer / Keyword Strategist / Triage Sharpener), 2–7 adaptive turns (one question per turn), floor-rule termination at clarity ≥0.7 on all 3 dimensions. Trigger: '주제 구체화', 'refine topic', '인터뷰'."
+description: "Socratic interview that turns a vague user topic into a structured `topic.json` spec before `/research-papers` Phase A. 3 perspectives (Scope Definer / Keyword Strategist / Triage Sharpener), 2–7 adaptive turns (one question per turn), floor-rule termination at clarity ≥0.7 on all 3 dimensions. Triggers: 'refine topic', 'topic refinement', 'interview'."
 ---
 
 # Topic Refine Skill
@@ -20,9 +20,9 @@ Every turn, Claude chooses exactly **1** of these perspectives to ask from — t
 
 | Perspective | Probes | Sample question stems |
 |---|---|---|
-| **Scope Definer** | venues, years, `include_arxiv` | **Bounded**: "Venue 범위: (A) whitelist 6개 전체 (B) NLP 우선 (ACL/EMNLP) (C) ML 우선 (ICML/NeurIPS/ICLR) (D) 직접 지정" · "연도 범위: (A) 최근 3년 (B) 최근 5년 (C) 직접 지정" · "arXiv preprint 포함: (A) 아니오 — whitelist venue만 (B) 예 (--include-arxiv)" |
-| **Keyword Strategist** | which 2 axes, 3-variant expansion | **Open-ended**: "첫 번째 축은 `<분야명>`으로 보임. 두 번째 축 필요? (예: evaluation / training dynamics / sampling)" · "`<term>`의 약어/풀네임/어순변형 3종 중 누락된 것?" |
-| **Triage Sharpener** | core question, include/exclude, signal methods | **Bounded**: "논문 성격: (A) 새 method (B) survey/analysis (C) 둘 다 (D) 직접 지정" · **Open-ended**: "명확히 제외할 영역? (예: image diffusion은 text가 아니라 out)" · "Triage가 놓치면 안 되는 landmark method 3–5개는?" |
+| **Scope Definer** | venues, years, `include_arxiv` | **Bounded**: "Venue range: (A) all 6 whitelist (B) NLP first (ACL/EMNLP) (C) ML first (ICML/NeurIPS/ICLR) (D) specify manually" · "Year range: (A) last 3 years (B) last 5 years (C) specify manually" · "Include arXiv preprints: (A) no — whitelist venues only (B) yes (--include-arxiv)" |
+| **Keyword Strategist** | which 2 axes, 3-variant expansion | **Open-ended**: "The first axis looks like `<field name>`. Need a second axis? (e.g. evaluation / training dynamics / sampling)" · "Any of the 3 variants of `<term>` (abbrev / full name / word-order) missing?" |
+| **Triage Sharpener** | core question, include/exclude, signal methods | **Bounded**: "Paper type: (A) new method (B) survey/analysis (C) both (D) specify manually" · **Open-ended**: "Areas to clearly exclude? (e.g. image diffusion is out because this is about text)" · "What are the 3–5 landmark methods triage must not miss?" |
 
 ## Question Presentation Rules
 
@@ -30,14 +30,14 @@ Each question falls into one of two modes:
 
 | Mode | When | Format |
 |---|---|---|
-| **Bounded choice** | 답이 열거 가능한 유한 집합 (venue 선택, yes/no, 범위 선택, 스타일 선택 등) | `(A)` `(B)` `(C)` ... 라벨 + 한 줄 설명. 마지막에 "또는 자유 텍스트로 답변 가능" 부기 |
-| **Open-ended** | 사용자 자유 입력 필요 (키워드 제안, 제외 영역 서술, landmark method 나열 등) | 라벨 없이 질문만 제시. 필요시 예시를 `예: ...` 형태로 추가 |
+| **Bounded choice** | Answer is a finite enumerable set (venue choice, yes/no, range choice, style choice, etc.) | `(A)` `(B)` `(C)` ... labels + one-line descriptions. End with "or answer in free text" |
+| **Open-ended** | Needs user free-text input (keyword suggestions, exclusion-area description, landmark-method listing, etc.) | Question only, no labels. Add examples inline as `e.g. ...` when helpful |
 
 **Formatting contract:**
-- 선택지 라벨은 반드시 `(A)`, `(B)`, `(C)`, ... 알파벳 괄호.
-- 선택지 개수: 2–5개.
-- 사용자가 라벨만("B"), 괄호 포함("(B)"), 또는 자유 텍스트로 답해도 모두 수용.
-- 한 메시지에 질문은 항상 **1개만**. bounded 또는 open-ended 중 하나.
+- Choice labels must be `(A)`, `(B)`, `(C)`, ... alphabetic with parentheses.
+- Number of choices: 2–5.
+- Accept user answers as label-only ("B"), with parentheses ("(B)"), or free text.
+- **Exactly 1** question per message. Bounded or open-ended — not both.
 
 ## Turn Flow
 
@@ -75,7 +75,7 @@ Each dimension is 0.0–1.0. Claude judges based on the current topic.json draft
 - **Floor**: all 3 dimension scores ≥ 0.7 → `termination_reason: "floor"`
 - **Plateau**: 2 consecutive turns with delta < 0.05 on every dimension → `termination_reason: "plateau"`
 - **Ceiling**: turn 7 completed → `termination_reason: "ceiling"`
-- **User early-exit**: user types `proceed` / `진행` / `done` / `이대로` → `termination_reason: "user_early_exit"`
+- **User early-exit**: user types `proceed` / `go ahead` / `done` / `as-is` → `termination_reason: "user_early_exit"`
 
 **Minimum 2 turns** unless user early-exits. The escape phrases above are **interview-local** — they do not advance the harness Phase B→C gate (that's a separate later prompt after PLAN.md).
 
@@ -90,9 +90,9 @@ Each dimension is 0.0–1.0. Claude judges based on the current topic.json draft
 
 ## Divergence Guard
 
-If the user's answer invites divergence ("재미있는 게 뭐야?", "새로운 방향 제안해줘"), respond:
+If the user's answer invites divergence ("what's interesting?", "suggest a new direction"), respond:
 
-> "재미있는 주제 추천·새 연구 방향 제안은 이 interview의 역할이 아닙니다 (divergent ideation 금지). 기존에 보고 싶은 방향을 좁히는 단계입니다. 어느 쪽으로 좁히고 싶으신가요?"
+> "Suggesting interesting topics or new research directions is not this interview's role (divergent ideation is forbidden). This step narrows the direction you already want to pursue. Which way would you like to narrow it?"
 
 Never propose methods, datasets, or evaluation ideas the user has not already mentioned.
 

@@ -1,80 +1,80 @@
 ---
 name: paper-hunt
-description: "논문 수집. 기본은 6 whitelist venue(NeurIPS·AAAI·ICLR·ICML·ACL·EMNLP) 전용. OpenReview/ACL Anthology 스캔 + dedup + manifest cursor. workshop/Findings/arXiv preprint는 `--include-arxiv` 플래그 opt-in 시 `papers/metadata/etc/<Year>/`로 수집. 트리거: '논문 수집', 'arxiv 검색', 'OpenReview', 'venue 스캔', 'paper hunt'."
+description: "Paper collection. Default targets the 6 whitelist venues (NeurIPS / AAAI / ICLR / ICML / ACL / EMNLP) only. OpenReview / ACL Anthology scans + dedup + manifest cursor. Workshop / Findings / arXiv preprints are collected to `papers/metadata/etc/<Year>/` only when the `--include-arxiv` flag opts in. Triggers: 'paper collection', 'arxiv search', 'OpenReview', 'venue scan', 'paper hunt'."
 ---
 
 # Paper Hunt Skill
 
-논문 리스팅 단일 통합 플로우. seed/follow-up 구분 없음.
+Single integrated flow for paper listing. No seed / follow-up distinction.
 
-## 입력 / 출력
+## Input / Output
 
-- **입력 (CLI)**: 키워드, source 선택(openreview/anthology/arxiv), 연도 버킷(`--years`), venue 지정 방식 (`--venues` 명시 / `--venues-whitelist-all` 6개 전체), arXiv opt-in(`--include-arxiv`), 상한 (`--max-per-query` / `--max-per-venue-year`), `--date-from`(backward compat)
-- **Upstream contract (`papers` stage만 해당)**: 이 CLI 플래그들은 orchestrator가 `research/topics/<slug>.topic.json`에서 읽어 Phase A prompt로 paper-hunter에 주입하는 3개 필드와 1:1로 매핑된다. 이 스킬 자체는 topic.json을 직접 읽지 않고, paper-hunter가 prompt 문맥을 받아 `hunt.py`에 flag로 풀어 호출한다.
-  - `refined_topic` → Goal 문장 (CLI 파라미터 아님, PLAN.md 인용용)
-  - `keyword_groups` (`[[a1, a2, ...], [b1, ...]]`, ≤2 그룹) → `--keywords` 인자 집합. 그룹 내 변형은 개별 인자로 펼친다.
-  - `scope.venues` → `--venues-whitelist-all` 또는 `--venues` 리스트, `scope.years` → `--years` (빈 배열이면 기본 3년 윈도우), `scope.include_arxiv` → `--include-arxiv` 유무
-  - Fallback: topic.json이 없으면 (legacy CLI 경로) paper-hunter가 raw topic string을 받아 약어/풀네임/어순변형 3종으로 직접 확장. topic.json이 있지만 `topic_spec.py validate` 실패면 orchestrator가 이미 Phase A를 중단했어야 하므로 이 경로는 실행되지 않는다.
-- **출력**: `papers/metadata/<Venue>/<Year>/<slug>.raw.md` (whitelist). `--include-arxiv` 있을 때만 `papers/metadata/etc/<Year>/<slug>.raw.md` (etc)도 생성. `papers/vector_db/manifest.json` cursor 갱신, year-bucket별 카운트 로그 + grand total (whitelist/etc/per-venue-year breakdown)
+- **Input (CLI)**: keywords, source selection (openreview / anthology / arxiv), year buckets (`--years`), venue specification (`--venues` explicit / `--venues-whitelist-all` for all 6), arXiv opt-in (`--include-arxiv`), limits (`--max-per-query` / `--max-per-venue-year`), `--date-from` (backward compat).
+- **Upstream contract (applies to the `papers` stage only)**: these CLI flags map 1:1 with the 3 fields the orchestrator reads from `research/topics/<slug>.topic.json` and injects into paper-hunter's Phase A prompt. This skill does not read topic.json directly; paper-hunter takes the prompt context and unfolds it into flags when calling `hunt.py`.
+  - `refined_topic` → Goal sentence (not a CLI parameter; cited in PLAN.md)
+  - `keyword_groups` (`[[a1, a2, ...], [b1, ...]]`, ≤ 2 groups) → the set of `--keywords` arguments. In-group variants are spread as individual arguments.
+  - `scope.venues` → `--venues-whitelist-all` or `--venues` list; `scope.years` → `--years` (empty array → default 3-year window); `scope.include_arxiv` → presence/absence of `--include-arxiv`
+  - Fallback: if topic.json is missing (legacy CLI path), paper-hunter takes a raw topic string and expands it into 3 forms (abbrev / full name / word-order variant). If topic.json exists but `topic_spec.py validate` fails, the orchestrator should already have aborted Phase A, so this path does not execute.
+- **Output**: `papers/metadata/<Venue>/<Year>/<slug>.raw.md` (whitelist). With `--include-arxiv`, also `papers/metadata/etc/<Year>/<slug>.raw.md` (etc). Updates `papers/vector_db/manifest.json` cursor; logs per-year-bucket counts + grand total (whitelist / etc / per-venue-year breakdown).
 
-### 주요 CLI 플래그
+### Key CLI flags
 
-| 플래그 | 기본값 | 의미 |
+| Flag | Default | Meaning |
 |---|---|---|
-| `--years Y1 Y2 ...` | `[today.year, -1, -2]` (KST) | scan-priority 순서로 year 버킷 순회. 입력 순서 존중. **newest-first 권장**. |
-| `--venues-whitelist-all` | False | 6 whitelist venue 전체를 target에 추가 (`--venues`와 합집합). OpenReview 지원 venue(ICLR/NeurIPS/ICML)는 자동으로 `<Venue>.cc/<year>/Conference` venueid로 확장. 나머지(AAAI/ACL/EMNLP)는 anthology/arXiv comment source로 커버된다. |
-| `--include-arxiv` | False | **opt-in**. True일 때만 arXiv 키워드 소스를 돌리고 openreview/anthology의 `venue_class == "etc"` 결과를 keep. False면 arXiv 소스는 자동 스킵되고 etc 분류는 drop. |
-| `--sources` | `openreview anthology arxiv` | year bucket 안에서 **이 순서 고정**으로 호출된다. `--include-arxiv`가 없으면 `arxiv`는 런타임에 자동 제거. |
-| `--max-per-venue-year N` | 200 | (canonical venue, year) 조합당 상한. 글로벌 dedup과 독립적으로 동작. |
-| `--max-per-query N` | 100 | arXiv 키워드 쿼리 1회당 상한. (year × keyword별 독립 호출) |
-| `--date-from YYYY-MM-DD` | None | **`--years` 있으면 무시**. backward compat. |
+| `--years Y1 Y2 ...` | `[today.year, -1, -2]` (KST) | Iterate year buckets in scan-priority order. Respects input order. **Newest-first recommended.** |
+| `--venues-whitelist-all` | False | Add all 6 whitelist venues to targets (union with `--venues`). OpenReview-supported venues (ICLR/NeurIPS/ICML) auto-expand to `<Venue>.cc/<year>/Conference` venueids; the rest (AAAI/ACL/EMNLP) are covered via anthology / arXiv comment sources. |
+| `--include-arxiv` | False | **Opt-in**. Only when True does the arXiv keyword source run, and `venue_class == "etc"` results from openreview/anthology are kept. When False, arXiv source is auto-skipped and etc classification is dropped. |
+| `--sources` | `openreview anthology arxiv` | Invoked in **this fixed order** inside a year bucket. Without `--include-arxiv`, `arxiv` is auto-removed at runtime. |
+| `--max-per-venue-year N` | 200 | Cap per (canonical venue, year) combination. Operates independently of global dedup. |
+| `--max-per-query N` | 100 | Cap per single arXiv keyword query. (Called independently per year × keyword.) |
+| `--date-from YYYY-MM-DD` | None | **Ignored if `--years` is given**. Backward compat. |
 
-## 키워드 전략
+## Keyword strategy
 
-hunter는 **recall 담당**, narrow 관련도 판단은 하류 triage(`--topic`)에 위임 (hunter=recall / triage=precision 경계).
+The hunter handles **recall**; narrow relevance judgment is delegated to downstream triage (`--topic`) (hunter = recall / triage = precision boundary).
 
-- 사용자가 준 topic에서 **분야(field)를 추출해 canonical 용어로 변환**한 것을 키워드로 쓴다. 주제 문장·narrow 방법명을 그대로 쓰지 않는다.
-- 축 **최대 2개**로 분해하고, 잘 확립된 분야는 canonical 용어 1개 + synonym 정도로 충분.
-- **생소·신생 분야**(표기 아직 표준화 안 됨)는 축약형·풀이·어순 변형을 여러 개 병기해 recall 확보.
-- 분야 추출과 canonical 변환은 Claude가 topic을 보고 직접 판단한다.
-- **키워드 매칭 범위: title ∪ abstract** (모든 source). arXiv는 `(ti:"kw" OR abs:"kw")` 쿼리, anthology는 listing 단계에서 title pre-filter 없이 detail fetch 후 `title + abstract` 문자열에서 매치, openreview는 venueid 전체 dump이므로 이 규칙과 무관. 이전 arxiv `abs:` 단독·anthology title pre-filter 방식은 abstract-only 또는 title-only hit을 누락했다.
+- Extract the **field** from the user's topic and convert to **canonical terms** to use as keywords. Do not use the topic sentence or narrow method name verbatim.
+- Decompose into **at most 2 axes**. For well-established fields, one canonical term + a synonym is usually enough.
+- For **new / emerging fields** (no standardized notation yet), list multiple variants (abbrev / expansion / word-order) to secure recall.
+- Field extraction and canonicalization are judged by Claude directly from the topic.
+- **Keyword match scope: title ∪ abstract** (all sources). arXiv uses `(ti:"kw" OR abs:"kw")`; for anthology, listing does not pre-filter on title — fetch detail, then match on `title + abstract`; openreview dumps the whole venueid so this rule does not apply. The older arxiv `abs:`-only / anthology title-pre-filter approach missed abstract-only or title-only hits.
 
 ---
 
-## 핵심 규칙 (inline — references로 옮기지 않는다)
+## Core rules (inline — do not move to references)
 
-- **6 whitelist venue**: `NeurIPS`, `AAAI`, `ICLR`, `ICML`, `ACL`, `EMNLP` (대문자 casing 고정). whitelist 밖 venue는 `classify_route()`가 `etc` 라벨로 분류한다 (venue label은 원문 보존).
-- **venue_class ∈ {whitelist, etc}**: 모든 논문은 `classify_route()`를 거쳐 이 둘 중 하나로 라벨링된다.
-- **`etc` 라우팅은 `--include-arxiv` opt-in**: 기본 실행(플래그 없음)에서는 `etc` 분류 결과를 hunt.py가 drop하고 arXiv 소스를 아예 돌리지 않는다. `--include-arxiv`가 있을 때만 `whitelist` → `papers/metadata/<Venue>/<Year>/`, `etc` → `papers/metadata/etc/<Year>/`로 두 경로 모두 기록된다.
-- **3개년 버킷, newest-first 순회**: 기본 scan 순서는 `[today.year, -1, -2]`. 루프는 `year → source → venue` (outer → inner). per-year source 순서는 `openreview → anthology → arxiv`로 **고정**. 사용자가 `--years`로 연도 순서를 주면 그 순서 그대로 존중 (내부 재정렬 금지).
-- **전역 dedup은 year 경계를 넘어 유지**: `SeenKeys`는 manifest에서 1회만 초기화되고 모든 year 버킷을 관통한다. 2026 버킷에서 본 arxiv_id/openreview_id/정규화 제목은 2025/2024 버킷에서 재처리되지 않는다. 연도 진입 시 테이블 리셋 금지.
-- **금지 디렉토리 (신규 생성 금지)**: `papers/arXiv/`, `papers/OpenReview/`, `papers/preprint/`, `papers/workshop/`, `papers/findings/` — 이런 논문은 전부 `papers/metadata/etc/<Year>/`로 모은다.
-- **Full-text 정책 분리 (listing vs summarization)**:
-  - 이 스킬(paper-hunt, 리스팅)은 **abstract + API 메타만** 사용해 판단·분류·dedup·`raw.md` 생성.
-  - 전문 PDF 파싱 + adaptive Marp 요약은 **paper-summarize** 스킬의 책임 (`len(full_text) > 3000` 등 full-text 프로토콜 강제).
-  - **Optional full-text fetch**: (1) venue_class 분류 불가, (2) near-duplicate 의심, (3) relevance 애매 중 하나일 때만 `pymupdf`로 PDF 첫 2–3페이지만 읽어 판단 보조. `raw.md` 본문에는 여전히 abstract만 저장.
-- **frontmatter**: `venue`는 원문, `venue_class: "whitelist" | "etc"`, 그 외 id/url/published/categories/keywords/hunter_fetched.
-- **Findings of ACL/EMNLP (및 NAACL main·Findings 전체)**: 메인 proceedings 6-venue whitelist에 포함되지 않으므로 `venue_class: "etc"`. `--include-arxiv` 있을 때만 `papers/metadata/etc/<Year>/`에 `venue: "ACL Findings"` 같은 원문 라벨로 기록된다. 없으면 drop.
+- **6 whitelist venues**: `NeurIPS`, `AAAI`, `ICLR`, `ICML`, `ACL`, `EMNLP` (uppercase casing fixed). Non-whitelist venues are labeled `etc` by `classify_route()` (the venue label preserves the original).
+- **venue_class ∈ {whitelist, etc}**: every paper passes through `classify_route()` and is labeled as one of the two.
+- **`etc` routing requires `--include-arxiv` opt-in**: in default runs (no flag), hunt.py drops `etc` results and does not run the arXiv source at all. Only with `--include-arxiv` are both paths written: `whitelist` → `papers/metadata/<Venue>/<Year>/`, `etc` → `papers/metadata/etc/<Year>/`.
+- **3-year buckets, newest-first**: default scan order `[today.year, -1, -2]`. The loop is `year → source → venue` (outer → inner). The per-year source order is **fixed** at `openreview → anthology → arxiv`. If the user passes year order via `--years`, respect that order exactly (no internal reordering).
+- **Global dedup persists across year boundaries**: `SeenKeys` initializes once from the manifest and carries through all year buckets. arxiv_id / openreview_id / normalized title seen in the 2026 bucket are not reprocessed in 2025 / 2024. Do not reset the table on year entry.
+- **Forbidden directories (must not be created)**: `papers/arXiv/`, `papers/OpenReview/`, `papers/preprint/`, `papers/workshop/`, `papers/findings/` — every such paper goes under `papers/metadata/etc/<Year>/`.
+- **Full-text policy separation (listing vs. summarization)**:
+  - This skill (paper-hunt, listing) uses **abstract + API metadata only** to judge, classify, dedup, and produce `raw.md`.
+  - Full-text PDF parsing + adaptive Marp summarization are **paper-summarize**'s responsibility (enforcing `len(full_text) > 3000` and other full-text protocols).
+  - **Optional full-text fetch**: only when (1) venue_class cannot be classified, (2) near-duplicate is suspected, or (3) relevance is ambiguous — read the PDF's first 2–3 pages via `pymupdf` as a decision aid. `raw.md` body still stores abstract only.
+- **frontmatter**: `venue` is verbatim; `venue_class: "whitelist" | "etc"`; plus id/url/published/categories/keywords/hunter_fetched.
+- **Findings of ACL/EMNLP (and NAACL main + Findings)**: not part of the main 6-venue whitelist → `venue_class: "etc"`. With `--include-arxiv`, recorded under `papers/metadata/etc/<Year>/` using the original label (e.g. `venue: "ACL Findings"`). Without the flag, dropped.
 
-## 정식 진입점 (scripts/)
+## Canonical entry points (scripts/)
 
-| 스크립트 | 역할 |
+| Script | Role |
 |---|---|
-| `scripts/classify_route.py` | `classify_route(result)` 순수 함수 + `WHITELIST`·`VENUE_PAT`·`CANONICAL`. 3개 소스가 전부 이 함수를 거쳐 `venue_class` 결정. |
-| `scripts/hunt.py` | CLI. OpenReview + Anthology + arXiv 통합, dedup, `raw.md` emit, manifest cursor. abstract만 사용. |
+| `scripts/classify_route.py` | Pure function `classify_route(result)` + `WHITELIST` · `VENUE_PAT` · `CANONICAL`. All 3 sources go through it to set `venue_class`. |
+| `scripts/hunt.py` | CLI. Integrates OpenReview + Anthology + arXiv, dedup, `raw.md` emission, manifest cursor. Uses abstract only. |
 
-**호출 예**:
+**Invocation examples**:
 
-(1) 자동 3년 버킷 (권장 기본값, 6-venue whitelist 전용):
+(1) Auto 3-year buckets (recommended default, whitelist-only):
 ```bash
 python3 /home/irteam/sw/research_hub/.claude/skills/paper-hunt/scripts/hunt.py \
     --venues-whitelist-all \
     --keywords "diffusion language model" "LLaDA" \
     --max-per-venue-year 200
 ```
-→ `--years` 생략 시 KST 기준 `[today.year, today.year-1, today.year-2]`. whitelist 6개 venue(OpenReview ICLR/NeurIPS/ICML + Anthology ACL/EMNLP + arXiv comment AAAI)만 newest-first로 훑는다. arXiv 키워드 소스는 자동 스킵.
+→ Without `--years`, defaults to KST `[today.year, today.year-1, today.year-2]`. Scans the 6 whitelist venues (OpenReview ICLR/NeurIPS/ICML + Anthology ACL/EMNLP + arXiv comment AAAI) newest-first. The arXiv keyword source is auto-skipped.
 
-(2) arXiv opt-in (사용자가 `--include-arxiv` 요청 시):
+(2) arXiv opt-in (when the user requests `--include-arxiv`):
 ```bash
 python3 /home/irteam/sw/research_hub/.claude/skills/paper-hunt/scripts/hunt.py \
     --years 2026 2025 2024 \
@@ -84,37 +84,37 @@ python3 /home/irteam/sw/research_hub/.claude/skills/paper-hunt/scripts/hunt.py \
     --max-per-query 100 \
     --max-per-venue-year 200
 ```
-→ 동일하게 `year → source → venue` 순서. per-year source 순서는 `openreview → anthology → arxiv` 고정. arXiv는 각 year의 `submittedDate:[YYYY01010000 TO YYYY12312359]` 윈도우로 쿼리. openreview/anthology의 `etc` 분류도 keep되어 `papers/metadata/etc/<Year>/`에 저장.
+→ Same `year → source → venue` order. Per-year source order fixed: `openreview → anthology → arxiv`. arXiv queries each year with `submittedDate:[YYYY01010000 TO YYYY12312359]`. `etc` classifications from openreview/anthology are kept under `papers/metadata/etc/<Year>/`.
 
-CLI 플래그·내부 플로우 상세는 `scripts/RUNBOOK.md` 참조.
+For CLI flag / internal flow details see `scripts/RUNBOOK.md`.
 
-## 상세 참고
+## Detailed references
 
-- **Source API 호출 템플릿 (openreview/anthology/arxiv) · canonical casing 표 · dedup 휴리스틱 상세 · raw.md full template**: `references/sources.md`
-- **CLI 플래그 · 내부 플로우 · 실패 복구 · 환경 설정**: `scripts/RUNBOOK.md`
+- **Source API call templates (openreview / anthology / arxiv) · canonical casing table · dedup heuristic details · full `raw.md` template**: `references/sources.md`
+- **CLI flags · internal flow · failure recovery · environment setup**: `scripts/RUNBOOK.md`
 
-## 실패 처리
+## Failure handling
 
-- API 429 (OpenReview/arXiv): 30s 대기 후 1회 재시도, 두 번째 429는 venue skip
-- Anthology init 실패: `acl-anthology` 패키지 import 또는 `from_repo()` 실패 시 anthology source skip
-- 인증 실패 (OpenReview): env 안내 후 venue skip (public-only fallback 시도)
-- 네트워크 (arXiv): 지수 백오프 3회
-- Optional fetch 실패: 리스팅 중단하지 않음, abstract fallback, 필요 시 `venue_class: "etc"` 라우팅
+- API 429 (OpenReview / arXiv): wait 30 s, retry once; a second 429 skips that venue
+- Anthology init failure: if `acl-anthology` import or `from_repo()` fails, skip the anthology source
+- Auth failure (OpenReview): guide env; skip venue (attempt public-only fallback)
+- Network (arXiv): exponential backoff, 3 retries
+- Optional fetch failure: do not abort listing; fall back to abstract; route as `venue_class: "etc"` if necessary
 
-## 체크리스트 (축약)
+## Checklist (abbreviated)
 
-- [ ] cursor 로드, API credential 확인
-- [ ] Primary source(whitelist 6) 기본. `--include-arxiv` 있을 때만 추가 source(arxiv keyword / reference chasing / non-whitelist venue) 동일 실행에서 스캔.
-- [ ] **year bucket newest-first 순회** (`[today.year, -1, -2]` 기본 / 사용자 `--years` 순서 존중)
-- [ ] per-year source 순서는 `openreview → anthology → arxiv` 고정
-- [ ] 리스팅은 abstract·메타 기반. 전문 파싱은 paper-summarize.
-- [ ] Optional full-text fetch는 분류불가/near-dup/애매 시만 (PDF 2–3p)
-- [ ] 각 결과 `classify_route()` → `whitelist`/`etc` 라벨
-- [ ] dedup (정규화 제목 + arxiv_id + anthology_id + openreview_id)
-- [ ] **전역 dedup 테이블이 year 경계를 넘어 유지됨** (버킷 진입 시 reset 금지)
-- [ ] `--max-per-venue-year` cap 준수 — per (canonical venue, year) 카운트
-- [ ] 저장 경로:
+- [ ] Cursor loaded; API credentials verified
+- [ ] Primary source (whitelist 6) by default. Additional sources (arxiv keyword / reference chasing / non-whitelist venue) scanned in the same run only if `--include-arxiv` is set.
+- [ ] **Year buckets iterated newest-first** (`[today.year, -1, -2]` default / respect user `--years` order)
+- [ ] Per-year source order fixed: `openreview → anthology → arxiv`
+- [ ] Listing uses abstract + metadata. Full-text parsing is paper-summarize's job.
+- [ ] Optional full-text fetch only on classify-failure / near-dup / ambiguity (PDF 2–3p)
+- [ ] Each result labeled via `classify_route()` → `whitelist` / `etc`
+- [ ] Dedup (normalized title + arxiv_id + anthology_id + openreview_id)
+- [ ] **Global dedup table carries across year boundaries** (no reset at bucket entry)
+- [ ] `--max-per-venue-year` cap enforced — per (canonical venue, year) count
+- [ ] Output paths:
   - whitelist → `papers/metadata/{NeurIPS|AAAI|ICLR|ICML|ACL|EMNLP}/<Year>/`
-  - etc → `papers/metadata/etc/<Year>/` (평탄) — whitelist 외 venue 포함
-- [ ] 금지 디렉토리 미생성 확인: `papers/arXiv/`, `papers/OpenReview/`, `papers/preprint/`, `papers/workshop/`, `papers/findings/`
-- [ ] manifest 갱신, 카운트 리포트(whitelist/etc/실패)
+  - etc → `papers/metadata/etc/<Year>/` (flat) — includes any non-whitelist venue
+- [ ] Verify forbidden directories not created: `papers/arXiv/`, `papers/OpenReview/`, `papers/preprint/`, `papers/workshop/`, `papers/findings/`
+- [ ] Manifest updated; count report (whitelist / etc / failures)

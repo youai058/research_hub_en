@@ -1,52 +1,52 @@
 ---
 name: paper-summarize
-description: "논문 전문(full-text PDF) adaptive Marp 요약. 2-stage 파이프라인(Gemini digest → Claude summary), pymupdf 파싱 강제(abstract-only 금지), 논문마다 PLANNING 블록 먼저 작성 (섹션 구조 + 섹션별 이미지 배치를 upfront로 결정)하고 필수 앵커 4개(TL;DR / Method / Result / Critical Reading)만 유지, 그 사이 섹션은 논문 흐름에 맞게 자유. 수식·수치 verbatim, 결과표는 Markdown 표. Marp frontmatter 유지. paper-summarizer 전용. 트리거: '논문 요약', 'Marp 슬라이드', 'paper summary'."
+description: "Full-text PDF adaptive Marp summary. 2-stage pipeline (Gemini digest → Claude summary), pymupdf parsing mandatory (abstract-only forbidden), per-paper PLANNING block first (section structure + per-section image placement decided upfront) with only 4 required anchors (TL;DR / Method / Result / Critical Reading); free sections between them follow the paper's flow. Equations / numbers verbatim, result tables as Markdown tables. Marp frontmatter preserved. paper-summarizer only. Triggers: 'paper summary', 'Marp slides', 'paper summary'."
 ---
 
 # Paper Summarize Skill
 
-논문을 **비판적**이고 **간결**하게, 각 논문의 논리 흐름에 맞춘 adaptive 구조로 요약하는 절차와 템플릿.
+Procedure and template for summarizing a paper **critically** and **concisely** with an adaptive structure tuned to each paper's logical flow.
 
-## 입력
+## Input
 
-- `papers/metadata/<V>/<Y>/<slug>.raw.md` (paper-hunter 산출) — 이 파일은 **abstract-level 메타데이터**다. paper-hunt 스킬은 리스팅 단계에서 abstract·API 메타로만 판단하며, raw.md 본문의 `## Abstract` 섹션에는 abstract만 들어 있다.
-- 본 요약 단계는 raw.md만으로는 부족하므로 **반드시 PDF 전문을 다운로드·pymupdf로 파싱**해야 한다. abstract-only 요약은 금지.
+- `papers/metadata/<V>/<Y>/<slug>.raw.md` (paper-hunter output) — this file is **abstract-level metadata**. The paper-hunt skill decides based on abstract + API metadata at listing time, and the `## Abstract` section of raw.md contains only the abstract.
+- This summarization stage cannot rely on raw.md alone, so it **must download the full PDF and parse via pymupdf**. Abstract-only summaries are forbidden.
 
-## 전문(full-text) 읽기 프로토콜 — 2-Stage (필수)
+## Full-text reading protocol — 2-Stage (required)
 
-이 스킬은 **Claude가 PDF 전문을 직접 읽지 않는다**. Stage 1에서 Gemini CLI(gemini-3-pro-preview, 1M+ 컨텍스트)가 PDF를 읽고 dense digest를 생성하고, Stage 2에서 Claude paper-summarizer agent가 그 digest + raw.md 메타만을 근거로 adaptive Marp 요약 (PLANNING-first, 4 앵커) + KG를 작성한다. pymupdf 직접 파싱은 **fallback 경로에서만** 허용된다.
+This skill **does not have Claude read the PDF directly**. In Stage 1 the Gemini CLI (gemini-3-pro-preview, 1M+ context) reads the PDF and produces a dense digest; in Stage 2 the Claude paper-summarizer agent writes the adaptive Marp summary (PLANNING-first, 4 anchors) + KG based on that digest + raw.md metadata only. Direct pymupdf parsing is allowed **on the fallback path only**.
 
-### Stage 1 — Gemini digest 생성 (bash)
+### Stage 1 — Generate Gemini digest (bash)
 
 ```bash
 python3 .claude/skills/paper-summarize/scripts/gemini_digest.py <raw_md_path>
-# 성공 시 stdout 마지막 줄 = 절대경로 papers/digest/<V>/<Y>/<slug>.digest.md
-# 실패 시 non-zero exit code (2: raw.md, 3: PDF, 4: pymupdf, 5: gemini CLI)
+# On success, last stdout line = absolute path papers/digest/<V>/<Y>/<slug>.digest.md
+# On failure, non-zero exit code (2: raw.md, 3: PDF, 4: pymupdf, 5: gemini CLI)
 ```
 
-스크립트가 내부적으로 수행하는 일:
+What the script does internally:
 
-1. **raw.md frontmatter 파싱** → `pdf_url` / `arxiv_id` / `anthology_id` / `cvf_url` / `slug` / `venue_class` / `venue` / `year`.
-2. **PDF 확보** (4-way fallback, 기존 우선순위 유지):
-   1. raw.md frontmatter의 `pdf_url` (arXiv/OpenReview/CVF/Anthology)
-   2. `arxiv_id`로 `https://arxiv.org/pdf/{id}.pdf`
-   3. `anthology_id`로 `https://aclanthology.org/{id}.pdf`
-   4. `cvf_url` 직접
-   - 저장 경로: `papers/digest/<V>/<Y>/.pdf_cache/<slug>.pdf` (gitignore 대상). 이미 있으면 재사용, `--force`로 무효화.
-3. **pymupdf 전문 파싱** + `len(full_text) > 3000` 체크.
-4. **Gemini 호출**: `gemini -m gemini-3-pro-preview -p "<digest_prompt v1>" -o text` 에 full_text를 stdin으로 전달. 타임아웃 600s. 출력은 장문 Markdown digest (2–5k words, 수식·수치 verbatim).
-5. **digest 파일 작성**: `papers/digest/<V>/<Y>/<slug>.digest.md` (gitignore 대상). frontmatter에 `source_raw`, `source_pdf_sha256`, `generated_at` (KST), `model: gemini-3-pro-preview`, `prompt_version: v6`, 그리고 **figure list**(`figures:` YAML 배열, 각 항목 `{label, path, section_hint, reason}`) + backward-compat 단축 필드(`key_figure_label`, `key_figure_reason`, `key_figure_path` = figures[0]) 기록. digest 캐시는 `source_pdf_sha256` **AND** `prompt_version`이 둘 다 일치해야 유효하다 — PROMPT_VERSION이 bump되면 PDF sha가 같아도 재생성된다. `--force`는 캐시를 전면 무효화.
-6. **Figure candidates 선정 + 추출** (v6부터):
-   - Gemini가 digest 말미에 `CANDIDATE: Figure N | Section: <hint> | Reason: <한 문장>` 라인을 **1-4개** (priority 순서, 가장 정보량 많은 figure가 첫 줄) 출력하도록 프롬프트가 강제한다. 테이블은 선택 대상이 아니다. 그림이 없는 논문은 `CANDIDATES: NONE — <reason>` 한 줄.
-   - `section_hint` token: `Method|Motivation|Observation|Setup|Result|Analysis|Discussion` 중 하나 — 다운스트림 agent가 섹션별 이미지 배치를 PLANNING에서 결정할 때 힌트로 사용한다.
-   - `gemini_digest.py`가 각 candidate에 대해 pymupdf 캡션 검색(`^(Figure|Fig\.?)\s*N[:\.\s]`)으로 위치를 찾고 캡션 위 → 아래 → 전체 페이지 순서로 crop, image block·`page.get_drawings()` union으로 bbox 축소(높이 10% 미만이면 원본 영역 유지).
-   - `fitz.Matrix(3, 3)` (≈216 DPI)로 clip 렌더 → `papers/marp-summary/<V>/<Y>/.figure_cache/<slug>__fig<N>.png` (gitignore 대상). **파일명 스킴은 `<slug>__fig<N>.png`** — figure 번호를 그대로 보존해 다운스트림 PLANNING이 참조하기 쉽게 한다.
-   - sanity: PNG <10KB면 실패로 간주하고 삭제 → 해당 figure만 list에서 누락.
-   - **figure 추출 실패는 fatal이 아니다**. digest는 exit 0으로 쓰고, 성공한 figure만 `figures:` list에 담긴다. 전부 실패하면 `figures: []`. 다운스트림(agent)은 사용 가능한 figure만 PLANNING에 배치한다.
+1. **Parse raw.md frontmatter** → `pdf_url` / `arxiv_id` / `anthology_id` / `cvf_url` / `slug` / `venue_class` / `venue` / `year`.
+2. **Acquire PDF** (4-way fallback, order preserved):
+   1. `pdf_url` from raw.md frontmatter (arXiv/OpenReview/CVF/Anthology)
+   2. `https://arxiv.org/pdf/{id}.pdf` from `arxiv_id`
+   3. `https://aclanthology.org/{id}.pdf` from `anthology_id`
+   4. `cvf_url` directly
+   - Save path: `papers/digest/<V>/<Y>/.pdf_cache/<slug>.pdf` (gitignored). Reused if present; `--force` invalidates.
+3. **pymupdf full-text parse** + `len(full_text) > 3000` check.
+4. **Gemini call**: `gemini -m gemini-3-pro-preview -p "<digest_prompt v1>" -o text` with full_text on stdin. Timeout 600s. Output is a long Markdown digest (2–5k words, equations and numbers verbatim).
+5. **Write digest file**: `papers/digest/<V>/<Y>/<slug>.digest.md` (gitignored). Frontmatter records `source_raw`, `source_pdf_sha256`, `generated_at` (KST), `model: gemini-3-pro-preview`, `prompt_version: v6`, plus a **figure list** (`figures:` YAML array; each entry `{label, path, section_hint, reason}`) and backward-compat shortcut fields (`key_figure_label`, `key_figure_reason`, `key_figure_path` = figures[0]). The digest cache is valid only when **both** `source_pdf_sha256` AND `prompt_version` match — if PROMPT_VERSION is bumped the digest is regenerated even when the PDF sha is unchanged. `--force` fully invalidates the cache.
+6. **Figure candidate selection + extraction** (since v6):
+   - The prompt forces Gemini to emit **1–4** trailing lines `CANDIDATE: Figure N | Section: <hint> | Reason: <one sentence>` (priority order, most informative figure first). Tables are not candidates. Papers with no figures emit a single `CANDIDATES: NONE — <reason>` line.
+   - `section_hint` token: one of `Method|Motivation|Observation|Setup|Result|Analysis|Discussion` — the downstream agent uses this hint when deciding per-section image placement in PLANNING.
+   - `gemini_digest.py` locates each candidate via pymupdf caption search (`^(Figure|Fig\.?)\s*N[:\.\s]`), crops above-caption → below-caption → whole-page, and shrinks the bbox via union of image blocks + `page.get_drawings()` (keeps the original region if crop height < 10%).
+   - Renders the clip at `fitz.Matrix(3, 3)` (≈216 DPI) → `papers/marp-summary/<V>/<Y>/.figure_cache/<slug>__fig<N>.png` (gitignored). **Filename scheme is `<slug>__fig<N>.png`** — preserving the figure number so downstream PLANNING can reference it easily.
+   - Sanity: if the PNG is <10 KB treat it as a failure and delete → only that figure is dropped from the list.
+   - **Figure extraction failure is not fatal**. The digest is still written with exit 0; only successfully extracted figures land in the `figures:` list. If all fail, `figures: []`. The downstream agent places only available figures into PLANNING.
 
 ### Stage 2 — Claude summarizer (agent, **planning-first**)
 
-논문마다 섹션 구조가 다르고 figure 위치·용도도 다르므로 **PLANNING 블록(섹션 구조 + 섹션별 이미지 배치)을 먼저 결정한 뒤 본문을 채운다**. 고정 6-part 템플릿에 억지로 맞추지 않는다. 섹션 순서·제목·이미지 배치는 PLANNING이 정해지면 그대로 유지 — 도중에 재배치 금지.
+Section structure, figure placement, and figure purpose differ per paper, so **decide the PLANNING block (section structure + per-section image placement) first, then fill the body**. Do not force papers into a fixed 6-part template. Once PLANNING fixes the section order / titles / image placement, keep it — do not rearrange mid-flight.
 
 **Step 2.0 — Agent-level cache re-check (idempotency guard)**
 
@@ -62,13 +62,13 @@ Parse the JSON. If `hits` contains this paper's path, skip the remaining steps f
 
 This step is cheap (~100ms per paper) and guards against wasted work when two main sessions race.
 
-**Step 2a — digest 읽기**
-1. `raw_md_path`와 `digest_path`를 Read 도구로 읽는다. **pymupdf 직접 호출 금지** (fallback 제외).
-2. digest의 `## Author Framing` 블록, 각 섹션 제목, `# Figures and Tables index`, frontmatter의 `figures:` 리스트를 스캔해 (a) 논문 구조 (b) 사용 가능한 이미지 후보를 파악한다.
+**Step 2a — Read the digest**
+1. Read `raw_md_path` and `digest_path` with the Read tool. **Do not call pymupdf directly** (fallback path only).
+2. Scan the digest's `## Author Framing` block, each section heading, `# Figures and Tables index`, and frontmatter `figures:` list to identify (a) the paper structure and (b) available image candidates.
 
-**Step 2b — PLANNING 블록 설계 (필수, 본문 작성 전)**
+**Step 2b — Design the PLANNING block (required, before body)**
 
-파일 최상단에 HTML 주석으로 PLANNING 블록을 먼저 적는다 (최종 .md에도 남긴다 — 유지보수·검증용). **섹션 구조와 섹션별 이미지 배치를 함께 결정**한다. 아래 형식을 엄격히 따른다:
+Place the PLANNING block at the very top of the file as an HTML comment (also keep it in the final .md for maintenance / verification). **Decide section structure and per-section image placement together**. Strictly follow the format below:
 
 ```markdown
 <!--
@@ -76,58 +76,58 @@ PLANNING:
   SECTIONS:
     1. Lead                                    [no image]
     2. TL;DR (anchor)                          [no image]
-    3. Background — 왜 이 문제가 어려운가       [no image]
-    4. 핵심 관찰 — attention sink shift         [Figure 2]
-    5. Method (anchor) — PAD attack 구조        [Figure 3]
+    3. Background — why is this problem hard   [no image]
+    4. Key observation — attention sink shift  [Figure 2]
+    5. Method (anchor) — PAD attack structure  [Figure 3]
     6. Experiments Setup                       [no image — baseline table]
     7. Result (anchor)                         [no image — Markdown tables]
-    8. Analysis — sink-shift score 상관관계    [Figure 5]
+    8. Analysis — sink-shift score correlation [Figure 5]
     9. Critical Reading (anchor)               [no image]
   IMAGE_SOURCES:
-    - Figure 2: .figure_cache/<slug>__fig2.png — DLM step별 attention sink 시각화
+    - Figure 2: .figure_cache/<slug>__fig2.png — DLM attention sink visualization across steps
     - Figure 3: .figure_cache/<slug>__fig3.png — PAD attack pipeline overview
     - Figure 5: .figure_cache/<slug>__fig5.png — sink-shift score vs ASR
 -->
 ```
 
-규칙:
-- **SECTIONS**: 모든 섹션 번호·제목·이미지 결정을 한 블록에 담는다. 이미지가 들어가는 섹션은 `[Figure N]`, 안 들어가면 `[no image]` 또는 `[no image — <이유 한 마디>]`.
-- **IMAGE_SOURCES**: SECTIONS에 나온 모든 figure의 실제 path와 한 줄 용도. digest frontmatter `figures:` 리스트에 존재하는 figure만 허용 (없으면 추출 실패 또는 Gemini가 추천하지 않은 것 — PLANNING에 넣지 말 것).
-- 필수 앵커 4개(TL;DR / Method / Result / Critical Reading)는 반드시 SECTIONS에 포함. 제목 변형 허용, 순서 고정.
-- 자유 섹션 0개 이상: Background / Motivation / Observation / Experiments Setup / Analysis / Discussion / Conclusion 또는 narrative 한국어 H2.
-- 이미지는 **Method / Motivation / Observation / Analysis** 계열 섹션에 주로 배치. Result 섹션은 수치 표를 쓰므로 **기본적으로 no image**.
-- TL;DR / Critical Reading / Experiments Setup / Lead / Conclusion은 **기본 no image** (baseline 표·글만으로 충분).
-- 한 섹션에 2장 이상은 금지 (시각적 혼잡). 여러 figure가 적합하면 섹션을 쪼개거나 한 figure만 선택.
-- digest `figures:`에 한 장도 없으면 모든 섹션 `[no image]`.
+Rules:
+- **SECTIONS**: every section number, title, and image decision lives in this single block. Tag each section `[Figure N]` if an image goes in, `[no image]` or `[no image — <one-word reason>]` otherwise.
+- **IMAGE_SOURCES**: actual path and one-line purpose for every figure referenced in SECTIONS. Only figures present in the digest's frontmatter `figures:` list are allowed (if absent: either extraction failed or Gemini did not recommend it — do not add to PLANNING).
+- The 4 required anchors (TL;DR / Method / Result / Critical Reading) must appear in SECTIONS. Title variants allowed, order fixed.
+- 0 or more free sections: Background / Motivation / Observation / Experiments Setup / Analysis / Discussion / Conclusion, or narrative H2 headings in the summary's writing language.
+- Images go mostly into **Method / Motivation / Observation / Analysis** family sections. Result sections use numeric tables, so they are **by default no image**.
+- TL;DR / Critical Reading / Experiments Setup / Lead / Conclusion are **by default no image** (baseline table / prose is enough).
+- More than one image per section is forbidden (visual clutter). If multiple figures fit, split the section or pick one.
+- If the digest has no figures at all, mark every section `[no image]`.
 
-**필수 앵커 섹션 4개** (제목 변형 허용, 순서는 아래대로):
-1. **TL;DR** — H1 lead 직후 첫 콘텐츠 슬라이드. `> ` blockquote로 한두 문장 요약.
-2. **Method** — 핵심 idea + 수식 verbatim + pseudocode/figure.
-3. **Result** (또는 "Experiments Result", "실험 결과") — 수치 표는 반드시 Markdown 표.
-4. **Critical Reading** — 논문의 부족한 부분 3~5 bullet.
+**4 required anchor sections** (title variants allowed, order as below):
+1. **TL;DR** — first content slide right after the H1 lead. A `> ` blockquote of one or two sentences.
+2. **Method** — core idea + equation verbatim + pseudocode / figure reference.
+3. **Result** (or "Experiments Result", "실험 결과") — numeric tables MUST be Markdown tables.
+4. **Critical Reading** — 3–5 bullets on the paper's weaknesses.
 
-**PLANNING 예시 두 가지 outline**:
+**Two PLANNING outline examples**:
 - *classical*: Lead → TL;DR → Motivation → Method(Figure) → Setup → Result → Critical Reading
 - *narrative*: Lead → TL;DR → "왜 이 문제가 어려운가" → "핵심 아이디어"(Figure) → "어떻게 통하는가"(Figure) → Result → Critical Reading
 
-**Step 2c — 본문 채우기 (PLANNING에 정확히 맞춰)**
-1. SECTIONS의 순서·제목·이미지 배치를 **그대로 구현**한다. 섹션을 추가·삭제·재배치 금지.
-2. 각 섹션에 digest 내용을 매핑한다. 수식·수치는 digest에 이미 verbatim이므로 그대로 복사 (paraphrase 금지).
-3. **결과표는 Markdown 표로 작성한다 — 이미지 스크린샷 금지**. digest에 Markdown 표가 있으면 그대로, 있으나 지저분하면 정리하되 값은 절대 건드리지 말 것.
-4. **Critical Reading**은 digest에 없으므로 Claude가 작성한다 (full-text 기반 추론 — 실험 scope 한계, baseline 편향, reproducibility 등 3~5 bullet).
-5. **Keywords (RAG용)**는 선택 사항. 쓸 때는 최말미에 `` `kw1`, `kw2`, ... `` 형태로 raw.md abstract 기반 10~15개.
+**Step 2c — Fill the body (exactly matching PLANNING)**
+1. Implement SECTIONS' order, titles, and image placement **as-is**. Do not add / remove / rearrange.
+2. Map digest content into each section. Equations and numbers are already verbatim in the digest — copy them as-is (no paraphrase).
+3. **Result tables go in as Markdown tables — no screenshot images**. If the digest has Markdown tables, reuse; if messy, tidy structure but never touch values.
+4. **Critical Reading** is not in the digest, so Claude writes it (inferred from the full text — experiment scope limits, baseline bias, reproducibility, etc., 3–5 bullets).
+5. **Keywords (for RAG)** is optional. When included, put it at the very end as `` `kw1`, `kw2`, ... `` with 10–15 abstract-based terms.
 
-**Step 2d — 이미지 임베딩 (PLANNING IMAGE_SOURCES 그대로)**
+**Step 2d — Embed images (PLANNING IMAGE_SOURCES as-is)**
 
-PLANNING의 각 `[Figure N]` 태그가 달린 섹션에, IMAGE_SOURCES에 명시된 경로를 그대로 써서 이미지를 한 장 삽입한다:
-- 포맷: 해당 섹션 내부에 `![w:650](./.figure_cache/<slug>__fig<N>.png)` + 한 줄 캡션(IMAGE_SOURCES의 설명 또는 digest `figures[i].reason`).
-- 경로는 raw.md 디렉토리 기준 상대경로(`.figure_cache/<slug>__fig<N>.png`) — 최종 `<slug>.md`도 같은 디렉토리이므로 **경로 변환 없이 그대로**.
-- 이미지 한 장당 전용 슬라이드 만들 필요 없음 — 섹션 안쪽 흐름에 섞어도 OK. 맥락이 중요.
-- 결과 수치는 **절대 figure로 대체하지 않는다**. 성능 비교 bar chart가 figures에 있어도 그 figure는 PLANNING에서 `[no image]`로 두고 별도 Markdown 표로 수치를 옮긴다 (Gemini prompt가 이미 result-bar-chart는 배제하도록 강제하지만 최종 판단은 agent).
-- digest `figures: []` (빈 리스트)이면 PLANNING의 모든 섹션을 `[no image]`로 두고 이미지 삽입 생략. 실패 모드 아님 — Critical Reading에 "figure 없음" 플래그 추가 금지.
+For each PLANNING section tagged `[Figure N]`, insert exactly one image using the path from IMAGE_SOURCES:
+- Format: inside that section, `![w:650](./.figure_cache/<slug>__fig<N>.png)` + a one-line caption (from IMAGE_SOURCES description or digest `figures[i].reason`).
+- Path is relative to the raw.md directory (`.figure_cache/<slug>__fig<N>.png`) — the final `<slug>.md` lives in the same directory, so **use the path as-is without conversion**.
+- No need for a dedicated slide per image — mixing inside the section flow is fine. Context matters.
+- **Never substitute a figure for result numbers**. Even if a performance-bar-chart exists in figures, mark that section `[no image]` in PLANNING and transcribe the numbers into a Markdown table (the Gemini prompt already excludes result-bar-charts, but the final call is the agent's).
+- If digest `figures: []` (empty list), mark every PLANNING section `[no image]` and skip image insertion. Not a failure mode — do not add a "no figure" flag to Critical Reading.
 
-**Step 2e — 저장 경로 라우팅**
-`venue_class` 필드 기반. `<slug>.kg.json`도 같은 디렉토리에 emit.
+**Step 2e — Save path routing**
+Based on the `venue_class` field. `<slug>.kg.json` is emitted to the same directory.
 
 **Step 2f — Invoke kg_skeleton.py and patch Claim/Result on top**
 
@@ -154,20 +154,20 @@ Capture the exit code:
 
 **Invariant**: the skeleton file itself is a build artefact in `papers/digest/<V>/<Y>/`. It is not versioned, not an agent deliverable, and can be deleted at any time without breaking anything (next run regenerates it).
 
-### Fallback (Gemini digest 실패 시)
+### Fallback (when the Gemini digest fails)
 
-Stage 1 스크립트가 non-zero로 끝나거나 digest가 비어있으면 **abstract-only가 아니라** 기존 pymupdf 경로로 진행한다:
+If the Stage 1 script exits non-zero or the digest is empty, proceed via the pre-existing pymupdf path — **not** abstract-only:
 
-1. Claude가 직접 `import fitz` + `papers/digest/<V>/<Y>/.pdf_cache/<slug>.pdf`를 로드해 full_text 구성.
-2. 섹션 분할 (`Introduction`, `Method/Approach`, `Experiments`, `Results`, `Ablation`, `Conclusion`, `Appendix`) → adaptive Marp 요약의 PLANNING 근거로 사용.
-3. 긴 논문(>80쪽)은 메인 → ablation 부록 → 기타 부록 순서로 점진 요약.
-4. 출력 파일 frontmatter에 `digest_source: fallback-pymupdf`와 실패 이유(exit code + stderr 요약)를 반드시 기록.
+1. Claude directly `import fitz` + loads `papers/digest/<V>/<Y>/.pdf_cache/<slug>.pdf` to build full_text.
+2. Section split (`Introduction`, `Method/Approach`, `Experiments`, `Results`, `Ablation`, `Conclusion`, `Appendix`) → used as PLANNING basis for the adaptive Marp summary.
+3. For long papers (>80 pages), summarize incrementally in order Main → Ablation appendix → other appendices.
+4. The output file frontmatter MUST record `digest_source: fallback-pymupdf` and the failure reason (exit code + stderr summary).
 
-PDF 확보 자체가 불가능한 경우에만 요약 중단 + `papers/_rejected/`로 격리 (기존 규칙). **Abstract-only 축소 요약은 정상 출력이 아니며**, 정상 venue 디렉토리에 저장 금지.
+Only when even the PDF cannot be acquired do we stop summarization + quarantine to `papers/_rejected/` (existing rule). **Abstract-only shrunken summaries are not valid output** and must not be saved to a regular venue directory.
 
-## 출력 템플릿 (Marp, adaptive)
+## Output template (Marp, adaptive)
 
-**Marp frontmatter는 고정**이고, 본문 섹션 구성은 논문마다 다르다. 아래는 *classical outline* 예시다 (narrative outline도 동일 앵커만 지키면 OK).
+**Marp frontmatter is fixed**, body section composition is per-paper. The example below is a *classical outline* (a narrative outline is fine too as long as the 4 anchors are preserved).
 
 ```markdown
 ---
@@ -205,81 +205,81 @@ PLANNING:
 
 ## TL;DR
 
-> {한두 문장 — 논문이 뭘 보여줬고 왜 중요한지. 음슴체 유지. 예: "LLaDA-style discrete DLM에서 attention sink가 ARM과 달리 denoising step마다 shift한다는 걸 empirical하게 보여줌. 이는 DLM-specific prompt injection defense가 필요함을 시사함."}
+> {one or two sentences — what the paper shows and why it matters. Maintain 음슴체. Example: "LLaDA-style discrete DLM에서 attention sink가 ARM과 달리 denoising step마다 shift한다는 걸 empirical하게 보여줌. 이는 DLM-specific prompt injection defense가 필요함을 시사함."}
 
 ---
 
-## Motivation  <!-- 자유 섹션, 논문에 해당 flow 있을 때만 -->
+## Motivation  <!-- Free section, only when the paper has this flow -->
 
-- **Problem**: {풀려는 problem}
-- **기존 approach**: {prior work 방식}
-- **Limitation**: {기존 한계 → 이 연구를 motivate}
+- **Problem**: {problem to solve}
+- **기존 approach**: {prior work approach}
+- **Limitation**: {limitation that motivates this work}
 
 ---
 
-## Method  <!-- 필수 앵커. 제목 변형 OK ("Approach", "우리가 제안하는 것") -->
+## Method  <!-- Required anchor. Title variants OK ("Approach", "우리가 제안하는 것") -->
 
-- 핵심 idea 한 문장
-- 수식 (digest verbatim):
+- Core idea in one sentence
+- Equations (digest verbatim):
 
 $$
 \mathcal{L} = -\sum_i \log p(y_i | x_i)
 $$
 
-- algorithm pseudocode 또는 figure 참조
+- algorithm pseudocode or figure reference
 
-<!-- PLANNING에서 이 섹션에 [Figure 2] 지정 → IMAGE_SOURCES 경로 그대로 -->
+<!-- PLANNING marked this section [Figure 2] → IMAGE_SOURCES path as-is -->
 ![w:650](./.figure_cache/{slug}__fig2.png)
 
-*{figures[i].reason 한 줄 캡션}*
+*{one-line caption from figures[i].reason}*
 
 ---
 
-## Experiments Setup  <!-- 자유 섹션 -->
+## Experiments Setup  <!-- Free section -->
 
-| Method | Architecture | Key HP | Training | 비고 |
+| Method | Architecture | Key HP | Training | Notes |
 |---|---|---|---|---|
 | **Proposed** | ... | lr=…, batch=…, steps=… | from scratch / finetune | ... |
-| **Baseline A** | ... | ... | ... | 공정 비교 여부 / 논문 수치 인용 |
+| **Baseline A** | ... | ... | ... | fairness / paper-cited numbers |
 
-> 규칙: 각 비교 방법론 개별 행, HP 누락 시 "(논문 미기재)".
+> Rule: one row per compared method; when HP missing, "(not reported)".
 
 ---
 
-## Result  <!-- 필수 앵커. 수치 표는 반드시 Markdown 표 (이미지 금지) -->
+## Result  <!-- Required anchor. Numeric tables MUST be Markdown tables (no image) -->
 
 | Benchmark | Baseline | Proposed | Δ |
 |---|---|---|---|
 | LM1B PPL ↓ | 20.86 | ≤23.00 | +2.14 |
 | OWT PPL ↓ | 17.54 | ≤23.21 | +5.67 |
 
-- ablation 핵심 finding (digest verbatim 수치 유지, 반올림 금지)
-- statistical significance 보고 여부
+- key ablation finding (digest verbatim numbers preserved, no rounding)
+- statistical significance reported?
 
 ---
 
-## Analysis  <!-- 자유 섹션, 논문에 해당 flow 있을 때만 -->
+## Analysis  <!-- Free section, only when the paper has this flow -->
 
-- 저자의 관찰·해석
-- 보조 실험 (hyperparameter sweep, ablation detail 등)
+- Authors' observations / interpretations
+- Auxiliary experiments (hyperparameter sweep, ablation detail, etc.)
 
 ---
 
-## Critical Reading  <!-- 필수 앵커 -->
+## Critical Reading  <!-- Required anchor -->
 
 **논문의 부족한 부분**:
-- {약점 1: 예) experiment가 특정 dataset에만 한정됨}
-- {약점 2: 예) baseline이 outdated version임}
-- {약점 3: 예) main claim과 OWT 결과 간 32% gap을 "match or exceed"로 표현}
+- {Weakness 1: e.g., experiments limited to specific dataset}
+- {Weakness 2: e.g., baseline is outdated version}
+- {Weakness 3: e.g., 32% gap with main claim on OWT framed as "match or exceed"}
 
 ---
 
-## Keywords (RAG용, optional)  <!-- 말미에 두고 생략 가능 -->
+## Keywords (for RAG, optional)  <!-- At the end, may be omitted -->
 
 `keyword1`, `keyword2`, `keyword3`, ...
 ```
 
-### Narrative outline 예시 (같은 앵커 4개만 지키면 한국어 H2 자유)
+### Narrative outline example (free Korean H2 as long as the 4 anchors hold)
 
 ```markdown
 ## TL;DR
@@ -291,7 +291,7 @@ $$
 ## 핵심 아이디어 — PAD가 하는 것
 $$ ... $$
 
-## Method  <!-- 앵커 제목은 그대로 유지해도 되고 "PAD 어떻게 동작하는가?"로 바꿔도 됨 -->
+## Method  <!-- Anchor title can stay "Method" or become "PAD 어떻게 동작하는가?" -->
 - ...
 
 ## 실험 결과가 말하는 것
@@ -301,70 +301,70 @@ $$ ... $$
 - ...
 ```
 
-### 슬라이드 분리 규칙
+### Slide split rules
 
-- 모든 H2 앞에 `---` 슬라이드 구분자.
-- 한 슬라이드 안에 bullet >7개면 "## Method (cont.)" 같은 이어보기 슬라이드로 split.
-- 전체 ~12–18 슬라이드 목표 (논문 복잡도에 따라 가변).
+- `---` slide separator before every H2.
+- If a slide has >7 bullets, split into a follow-up like "## Method (cont.)".
+- Target total ~12–18 slides (varies with paper complexity).
 
-## 문체 규칙 (Code-switching + 음슴체)
+## Writing style (Code-switching + 음슴체)
 
-**한영 혼용 음슴체**: researcher가 랩 노트·커뮤니티에서 쓰는 자연스러운 한영 혼용 + 음슴체(~임, ~함, ~됨, ~없음) 말투를 사용한다.
-- **종결어미는 음슴체**: "~한다/~했다" 대신 "~함/~했음/~임/~됨/~있음/~없음" 사용.
-  - 예: "DLM의 attention sink가 ARM과 달리 denoising step마다 dynamically shift함" (O)
-  - 예: "DLM의 attention sink가 ARM과 달리 denoising step마다 dynamically shift한다" (X)
-- **기본 문장은 한국어**, technical term·proper noun·method name·metric name은 영어 그대로 유지.
-  - 예: "기존 ARM은 BOS token에 attention이 고정되는데, DLM은 step마다 sink position이 바뀜" (O)
-  - 예: "확산 언어 모델의 주의 집중 싱크가 자기회귀 모델과 달리..." (X — 어색한 번역 금지)
-- **번역하지 않는 것**: model name, method name, dataset name, metric name, loss function, architecture 용어 (transformer, attention, embedding 등), 약어 (LLM, DLM, ARM, BLEU, PPL 등).
-- **한국어로 쓰는 것**: 접속사, 조사, 일반 동사/형용사, 문장 구조 ("~를 제안함", "~에 비해 ~% 향상됨", "~라는 한계가 있음").
-- Section header는 영어 그대로 유지 (Marp 템플릿 고정).
+**Korean–English code-switching in 음슴체 register**: use the natural code-switched 음슴체(~임, ~함, ~됨, ~없음) voice that researchers write in lab notes / community posts.
+- **Sentence endings in 음슴체**: use "~함/~했음/~임/~됨/~있음/~없음" instead of "~한다/~했다".
+  - OK: "DLM의 attention sink가 ARM과 달리 denoising step마다 dynamically shift함"
+  - NG: "DLM의 attention sink가 ARM과 달리 denoising step마다 dynamically shift한다"
+- **Base sentence in Korean**, keep technical terms / proper nouns / method names / metric names in English as-is.
+  - OK: "기존 ARM은 BOS token에 attention이 고정되는데, DLM은 step마다 sink position이 바뀜"
+  - NG: "확산 언어 모델의 주의 집중 싱크가 자기회귀 모델과 달리..." (awkward translation forbidden)
+- **Do not translate**: model name, method name, dataset name, metric name, loss function, architecture terms (transformer, attention, embedding, etc.), abbreviations (LLM, DLM, ARM, BLEU, PPL, etc.).
+- **Write in Korean**: conjunctions, particles, general verbs/adjectives, sentence structure ("~를 제안함", "~에 비해 ~% 향상됨", "~라는 한계가 있음").
+- Section headers stay in English (Marp template fixed).
 
-## 비판적 추출 원칙
+## Critical-extraction principles
 
-1. **Planning-first**: 본문을 쓰기 전에 PLANNING 주석 블록을 먼저 작성한다. 섹션 구조 + 섹션별 이미지 배치(SECTIONS + IMAGE_SOURCES)를 **한 번에** 결정하고, 정해지면 그대로 채운다 — 도중에 섹션 순서·이미지 배치를 재배치하지 않는다. 이미지 배치는 digest `figures:` 리스트에 실제로 존재하는 figure만 허용.
-2. **TL;DR은 blockquote 한두 문장**: H1 lead 직후 첫 콘텐츠 슬라이드로 고정. 논문이 뭘 보여줬고 왜 중요한지. paraphrase OK (요약이므로).
-3. **수식·수치 원문 인용**: digest verbatim 그대로. paraphrase 금지, 반올림·단위 변환 금지. 결과표는 Markdown 표로 재현 (이미지 스크린샷 금지).
-4. **슬라이드 수 ~12–18 목표**: 각 section 1–3 슬라이드. 과도한 상세 금지. 논문 복잡도에 따라 가변.
-5. **Critical Reading은 논문의 부족한 부분**: experiment scope 한계, baseline 선택 편향, reproducibility issue, 저자 주장과 실제 증거 gap 등. 3–5 bullet.
-6. **이미지는 맥락 있는 자리에**: Method / Motivation / Observation / Analysis 계열 섹션 안쪽에 배치. title 슬라이드 직후·Result 섹션·Critical Reading에 고정 삽입하지 않는다. 한 섹션당 최대 1장.
-7. **Keywords는 선택**: 쓸 때만 최말미. abstract 본문에서 핵심 용어 10~15개. 저자 메타데이터나 Gemini 생성 키워드 금지.
+1. **Planning-first**: write the PLANNING comment block before the body. Decide section structure + per-section image placement (SECTIONS + IMAGE_SOURCES) **in one go** and then fill as decided — do not rearrange section order or image placement mid-flight. Image placement is allowed only for figures actually in the digest `figures:` list.
+2. **TL;DR is a one-or-two-sentence blockquote**: fixed as the first content slide right after the H1 lead. What the paper shows and why it matters. Paraphrase OK (it's a summary).
+3. **Equations and numbers quoted verbatim**: as-is from the digest. No paraphrase, no rounding, no unit conversion. Reproduce result tables as Markdown tables (no screenshot images).
+4. **Target ~12–18 slides**: 1–3 slides per section. Avoid over-detail. Scale with paper complexity.
+5. **Critical Reading = the paper's weaknesses**: experiment scope limits, baseline selection bias, reproducibility issues, gaps between author claims and actual evidence, etc. 3–5 bullets.
+6. **Images go in context**: inside Method / Motivation / Observation / Analysis family sections. Do not fix-insert right after the title slide, inside Result, or inside Critical Reading. Max 1 per section.
+7. **Keywords optional**: only when used, at the very end. 10–15 key terms from the abstract body. No author metadata or Gemini-generated keywords.
 
-## 파일명·경로
+## Filename / path
 
-- 입력: `papers/metadata/<V>/<Y>/<slug>.raw.md`
-- 출력: `papers/marp-summary/<V>/<Y>/<slug>.md` (raw 파일은 보존, 새 파일 생성)
-- 파일 길이: 200~500줄 목표, 초과 시 요약 축소
+- Input: `papers/metadata/<V>/<Y>/<slug>.raw.md`
+- Output: `papers/marp-summary/<V>/<Y>/<slug>.md` (raw preserved, new file created)
+- File length: target 200–500 lines; shrink summary if over.
 
-## 실패 모드
+## Failure modes
 
-- **PDF 없음 / 404**: 다운로드 경로 4종(arxiv/openreview/anthology/cvf)을 전부 시도한 뒤에도 실패하면 요약을 **중단하고** orchestrator에 reject 리턴. abstract-only 요약은 해당 venue 디렉토리에 저장하지 말고 `papers/_rejected/<slug>.raw.md`로 격리 후 이유를 기록.
-- **파싱 깨진 수식**: 해당 수식을 raw text로 code block에 보존 + Unknown에 플래그
-- **너무 긴 논문 (80페이지+)**: 메인 → ablation 부록 → 기타 부록 순서로 섹션 단위 요약 후 통합. 부록 생략 시 "Appendix X.Y는 요약 생략" 명시.
-- **저자 주장이 명확하지 않음**: Claims 섹션에 "저자 주장 추출 불확실" 플래그
+- **PDF missing / 404**: after all 4 download paths (arxiv/openreview/anthology/cvf) fail, **abort** summarization and return reject to the orchestrator. Do not save an abstract-only summary to the venue directory; quarantine to `papers/_rejected/<slug>.raw.md` with the reason recorded.
+- **Broken equation parse**: preserve that equation as raw text in a code block + flag it under Unknown.
+- **Very long paper (80+ pages)**: summarize per section in order Main → Ablation appendix → other appendices, then merge. If an appendix is skipped, state "Appendix X.Y summary omitted".
+- **Author claim unclear**: add a "author claim extraction uncertain" flag to the Claims section.
 
-## 체크리스트
+## Checklist
 
-- [ ] `gemini_digest.py` 실행 성공 → `papers/digest/<V>/<Y>/<slug>.digest.md` 존재, 또는 실패 시 fallback 플래그(`digest_source: fallback-pymupdf`) 기록
-- [ ] PDF 다운로드 성공 + (digest 경로) Gemini digest 생성 / (fallback 경로) pymupdf 파싱 성공 (`len(full_text) > 3000`)
-- [ ] Introduction/Method/Experiments/Results/Appendix 중 최소 4개 섹션 본문 내용이 digest 또는 pymupdf 경로로 확보됨
-- [ ] Marp frontmatter `marp: true` (PPT 호환 유지)
-- [ ] 최상단에 `PLANNING` HTML 주석 블록 존재 (planning-first 검증용). SECTIONS + IMAGE_SOURCES 두 서브블록 모두 존재
-- [ ] **4개 필수 앵커 모두 존재**: TL;DR / Method / Result / Critical Reading (제목 변형 허용)
-- [ ] TL;DR이 H1 lead 직후 첫 콘텐츠 슬라이드에 `> ` blockquote로 존재
-- [ ] 수식·수치 원문 인용 (digest verbatim)
-- [ ] 결과표는 **Markdown 표**로 작성 (이미지 스크린샷 금지)
-- [ ] 슬라이드 ~12–18개, 600줄 이내
-- [ ] PLANNING의 `[Figure N]` 태그가 달린 각 섹션에 해당 이미지가 정확히 1장 삽입됨 (PLANNING과 본문 동기화 검증). 경로는 IMAGE_SOURCES의 값 그대로. digest `figures: []`면 모든 섹션 `[no image]`
-- [ ] 한 섹션당 이미지 ≤1장. Result / TL;DR / Critical Reading / Lead 섹션은 `[no image]`
-- [ ] Critical Reading 포함 — 논문의 부족한 부분 3–5 bullet (full-text 기반일 때만 허용)
-- [ ] Keywords (RAG용)는 **선택** — 쓸 때만 말미, abstract 본문 기반 10~15개
-- [ ] 같은 디렉토리에 `<slug>.kg.json` 동시 작성 (아래 KG Emission 참조)
-- [ ] 저장 경로: 원본 raw.md의 `venue_class` 필드를 그대로 따라 라우팅 (paper-hunt가 이미 결정해 놓은 값)
+- [ ] `gemini_digest.py` ran successfully → `papers/digest/<V>/<Y>/<slug>.digest.md` exists, or on failure the fallback flag (`digest_source: fallback-pymupdf`) is recorded
+- [ ] PDF download succeeded + (digest path) Gemini digest generated / (fallback path) pymupdf parse succeeded (`len(full_text) > 3000`)
+- [ ] Content for at least 4 of Introduction/Method/Experiments/Results/Appendix obtained via digest or pymupdf path
+- [ ] Marp frontmatter `marp: true` (PPT compatibility)
+- [ ] Top-of-file `PLANNING` HTML comment block exists (planning-first verification). Both SECTIONS + IMAGE_SOURCES subblocks present
+- [ ] **All 4 required anchors present**: TL;DR / Method / Result / Critical Reading (title variants allowed)
+- [ ] TL;DR exists as a `> ` blockquote on the first content slide right after the H1 lead
+- [ ] Equations / numbers quoted verbatim (digest verbatim)
+- [ ] Result tables written as **Markdown tables** (no screenshot images)
+- [ ] ~12–18 slides, within 600 lines
+- [ ] Each PLANNING `[Figure N]`-tagged section has exactly one image inserted (PLANNING ↔ body sync check). Paths exactly match IMAGE_SOURCES. If digest `figures: []`, every section is `[no image]`
+- [ ] ≤1 image per section. Result / TL;DR / Critical Reading / Lead sections are `[no image]`
+- [ ] Critical Reading included — 3–5 bullets on the paper's weaknesses (only when full-text based)
+- [ ] Keywords (for RAG) **optional** — when used, at the end, 10–15 terms based on the abstract body
+- [ ] `<slug>.kg.json` written in the same directory (see KG Emission below)
+- [ ] Save path: route per the original raw.md's `venue_class` value (pre-decided by paper-hunt)
   - `whitelist` → `papers/marp-summary/<NeurIPS|AAAI|ICLR|ICML|ACL|EMNLP>/<Year>/`
-  - `etc`       → `papers/marp-summary/etc/<Year>/` (평탄 구조, 하위 venue 디렉토리 없음)
-  - 두 경로 모두 **정상 출력**이며 `etc`가 품질 열등을 의미하지 않는다 — 요약 기준은 동일하다.
-- [ ] 금지 경로 확인: `papers/arXiv/`, `papers/OpenReview/`, `papers/preprint/`, `papers/workshop/`, `papers/findings/` 등 소스/속성 디렉토리에 저장하지 않았는지 (해당 논문은 전부 `papers/marp-summary/etc/<Year>/`로)
+  - `etc`       → `papers/marp-summary/etc/<Year>/` (flat, no sub-venue directory)
+  - Both paths are **valid output**; `etc` does not imply lower quality — the summarization bar is identical.
+- [ ] Forbidden-path check: did not save under `papers/arXiv/`, `papers/OpenReview/`, `papers/preprint/`, `papers/workshop/`, `papers/findings/`, etc. (those all go to `papers/marp-summary/etc/<Year>/`)
 - [ ] Frontmatter `source_digest_sha256` matches `sha256(<slug>.digest.md)` byte-for-byte
 - [ ] Frontmatter `prompt_version` equals digest's `prompt_version` (both should be `v7` for new summaries)
 - [ ] Looped over every entry in `batch_paths` — none silently skipped except via Step 2.0 cache re-check
@@ -373,21 +373,21 @@ $$ ... $$
 
 ## KG Emission (byproduct)
 
-요약 `.md`와 **같은 디렉토리**에 `<slug>.kg.json`을 반드시 작성한다. 이 스킬이 소유하는 노드 타입:
+Write `<slug>.kg.json` in the **same directory** as the summary `.md`. Node types owned by this skill:
 
-| 타입 | prefix | 필수 필드 |
+| Type | Prefix | Required fields |
 |---|---|---|
 | `Paper` | `paper:` | title, authors[], venue, year, url |
 | `Author` | `author:` | name |
 | `Venue` | `venue:` | name, year |
-| `Claim` | `claim:` | text (저자 원문 인용), paper id |
+| `Claim` | `claim:` | text (author's original wording), paper id |
 | `Method` | `method:` | name |
 | `Dataset` | `dataset:` | name |
 | `Model` | `model:` | name |
 | `Metric` | `metric:` | name |
-| `Result` | `result:` | metric, value (원문 수치 그대로) |
+| `Result` | `result:` | metric, value (original number as-is) |
 
-**엣지**:
+**Edges**:
 - `Paper --AUTHORED_BY--> Author`
 - `Paper --PUBLISHED_IN--> Venue`
 - `Paper --MAKES_CLAIM--> Claim`
@@ -395,35 +395,35 @@ $$ ... $$
 - `Paper --USES_DATASET--> Dataset`
 - `Paper --USES_MODEL--> Model`
 - `Paper --REPORTS_RESULT--> Result`
-- `Result --EVIDENCED_BY--> Claim` (meta.polarity ∈ {support, contradict, mixed}; 필수)
+- `Result --EVIDENCED_BY--> Claim` (meta.polarity ∈ {support, contradict, mixed}; required)
 
-ID 예시: `paper:greedy-coordinate-gradient-2023#local`, `claim:greedy-coordinate-gradient-2023--c1`
+Example IDs: `paper:greedy-coordinate-gradient-2023#local`, `claim:greedy-coordinate-gradient-2023--c1`
 
-Provenance는 `KGFile` 루트에 `{source_file, source_sha, extracted_at, author_agent: "paper-summarizer"}`로 기입.
+Provenance lives on the `KGFile` root as `{source_file, source_sha, extracted_at, author_agent: "paper-summarizer"}`.
 
 ## Alias Check Protocol
 
-**`Method | Dataset | Model | Metric`** 신규 노드 emit 전 반드시 alias lookup:
+Before emitting a new **`Method | Dataset | Model | Metric`** node, alias lookup is mandatory:
 
 ```bash
 python3 .claude/skills/paper-kg/scripts/query.py lookup \
   --type Method --name-fuzzy "Greedy Coordinate Gradient"
 ```
 
-- 매치 score ≥85: 기존 id 재사용 (새 노드 생성 금지)
-- score <85: 새 id 생성 + `alias_check: {queried_name, matches: [...], decision: "new"}` 필드를 노드에 기록
-- 부트스트랩 (DB `nodes < 50`): alias_check 누락 허용 (curator가 softening). 단, 3회차 이후는 반드시 작성
+- Match score ≥85: reuse existing id (do not create a new node)
+- Score <85: create new id + record `alias_check: {queried_name, matches: [...], decision: "new"}` on the node
+- Bootstrap (DB `nodes < 50`): missing alias_check tolerated (curator softens). From the 3rd run onward it is mandatory.
 
-## Hybrid Query (참조)
+## Hybrid Query (reference)
 
-요약 중 "이 논문의 이전 버전이 있는가?", "같은 dataset을 쓰는 논문" 등을 확인할 때:
+While summarizing, to check things like "is there a prior version of this paper?" or "papers that use the same dataset":
 
 ```bash
 python3 .claude/skills/paper-kg/scripts/hybrid_query.py "GCG variant papers" --k 5
 ```
 
-리턴 JSON의 `kg.matched_nodes`와 `rag.chunks`를 교차 확인 후 alias/중복을 결정.
+Cross-check `kg.matched_nodes` and `rag.chunks` in the returned JSON before deciding alias / duplicate.
 
 ## Schema Enforcement
 
-모든 `.kg.json`은 `paper-kg/scripts/schema.py`의 `KGFile` Pydantic 모델을 통과해야 한다. 검증·upsert는 kg-curator가 수행하며, 실패 시 `papers/vector_db/rejected.jsonl`에 기록되어 orchestrator가 재dispatch한다. 상세 규칙은 `.claude/skills/paper-kg/SKILL.md` 참조.
+Every `.kg.json` must pass the `KGFile` Pydantic model in `paper-kg/scripts/schema.py`. Validation and upsert are handled by kg-curator; failures are logged to `papers/vector_db/rejected.jsonl` and re-dispatched by the orchestrator. For details see `.claude/skills/paper-kg/SKILL.md`.

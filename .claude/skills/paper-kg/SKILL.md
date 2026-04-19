@@ -1,48 +1,48 @@
 ---
 name: paper-kg
-description: "SQLite 지식 그래프. .kg.json 부산물 증분 ingest → papers/vector_db/kg.sqlite triplestore, Pydantic 검증 + 2-pass upsert (LLM 호출 없음), 쿼리 node/neighbors/lookup/sql + hybrid_query(RAG+KG). kg-curator + 모든 생성 에이전트. 트리거: 'KG 인덱싱', '지식 그래프 쿼리', '트리플 upsert', '하이브리드 쿼리'."
+description: "SQLite knowledge graph. Incremental ingest of `.kg.json` byproducts → papers/vector_db/kg.sqlite triplestore, Pydantic validation + 2-pass upsert (no LLM calls), query node / neighbors / lookup / sql + hybrid_query (RAG+KG). kg-curator + all emitting agents. Triggers: 'KG indexing', 'knowledge graph query', 'triple upsert', 'hybrid query'."
 ---
 
 # Paper KG Skill
 
-SQLite triplestore 기반 knowledge graph. 에이전트는 프로즈 파일 옆에 `.kg.json` 부산물을 쓰고, `kg-curator`가 이 파일을 LLM 없이 검증·ingest한다.
+Knowledge graph on an SQLite triplestore. Agents write a `.kg.json` byproduct next to each prose file; `kg-curator` validates and ingests these files without LLM calls.
 
-## 핵심 원칙
+## Core principles
 
-1. **추출은 부산물**: 별도 LLM 추출 패스 없음. `.kg.json`은 생성 에이전트(paper-summarizer 등)가 프로즈와 동시에 쓴다.
-2. **1:1 sibling 규칙**: `<source>.md` ↔ `<source>.kg.json` 같은 디렉토리. 스크립트 emission(lesson.py, loop_state.py)은 per-entry append.
-3. **Alias는 에이전트 판단**: 신규 canonical 노드(Method/Dataset/Model/Metric) 생성 전 `lookup --name-fuzzy`를 호출하고 결과를 `alias_check`에 기록.
-4. **Curator는 LLM 없음**: Pydantic 검증, ID regex, 타입-prefix 일치, FK 존재성, alias_check 필수 여부만 체크.
+1. **Extraction is a byproduct**: no separate LLM extraction pass. `.kg.json` is written by the emitting agent (paper-summarizer etc.) alongside the prose.
+2. **1:1 sibling rule**: `<source>.md` ↔ `<source>.kg.json` in the same directory. Script emissions (lesson.py, loop_state.py) append per entry.
+3. **Alias is the agent's call**: before creating a new canonical node (Method/Dataset/Model/Metric), call `lookup --name-fuzzy` and record the outcome in `alias_check`.
+4. **No LLM in the curator**: only Pydantic validation, ID regex, type ↔ prefix consistency, FK existence, and mandatory `alias_check`.
 
-## 스택
+## Stack
 
 - **Store**: `sqlite3` — `papers/vector_db/kg.sqlite` (PRAGMA foreign_keys=ON, WAL mode)
 - **Schema**: 3 tables — `nodes` (PK id) / `edges` (FK src·dst ON DELETE RESTRICT) / `aliases` (FK canonical_id)
 - **Validation**: `pydantic>=2` via `scripts/schema.py`
-- **Fuzzy lookup**: `rapidfuzz.fuzz.WRatio` ≥ 85 (결정론적)
-- **Hybrid query**: `paper-rag/scripts/query.py`를 module import (subprocess 금지)
+- **Fuzzy lookup**: `rapidfuzz.fuzz.WRatio` ≥ 85 (deterministic)
+- **Hybrid query**: `paper-rag/scripts/query.py` imported as a module (no subprocess)
 
-## 파일 구조
+## File layout
 
 ```
 papers/vector_db/
 ├── kg.sqlite              SQLite triplestore
 ├── kg-manifest.json       {file → sha256, last_upsert_at, counts}
 ├── extraction_log.jsonl   append-only audit
-├── rejected.jsonl         validation fail 로그 (orchestrator가 소비)
+├── rejected.jsonl         validation-fail log (consumed by orchestrator)
 ├── schema.version         "1"
 ├── kg.stale               KG stale marker (auto-touched by hook)
 ├── rag.stale              RAG stale marker (auto-touched by hook)
 ├── chroma/                ChromaDB persistent store
-├── manifest.json          RAG 해시·mtime 증분 상태
-├── kg-staging/            .kg.json 부산물 수집 대기 디렉토리
-└── .rejected_cursor       rejected.jsonl 증분 커서
+├── manifest.json          RAG hash / mtime incremental state
+├── kg-staging/            staging directory for `.kg.json` byproducts
+└── .rejected_cursor       rejected.jsonl incremental cursor
 
 .claude/skills/paper-kg/
 ├── SKILL.md               (this file)
 └── scripts/
     ├── schema.py          Pydantic models, ID regex, ALIAS_BOOTSTRAP_THRESHOLD
-    ├── db.py              SQLite open/migrate helpers
+    ├── db.py              SQLite open / migrate helpers
     ├── index.py           incremental 2-pass upsert
     ├── query.py           node / neighbors / lookup / sql
     ├── hybrid_query.py    RAG + KG joint retrieval
@@ -76,102 +76,102 @@ papers/vector_db/
 }
 ```
 
-**필수 필드**: `version`, `source_file`, `source_sha`, `author_agent`, `extracted_at`, `nodes`, `edges`.
+**Required fields**: `version`, `source_file`, `source_sha`, `author_agent`, `extracted_at`, `nodes`, `edges`.
 
-## 증분 ingest 알고리즘
+## Incremental ingest algorithm
 
 ```
-1. .kg.json 파일 모두 수집 (papers/, research/, experiments/, docs/)
-2. 각 파일 SHA256 계산
-3. manifest.json 과 비교
-   - new/changed: Pydantic 검증 → 통과 시 upsert pipeline, 실패 시 rejected.jsonl append
-   - removed: 이전 (source_file) 모든 nodes/edges DELETE
-4. Upsert pipeline (트랜잭션):
-   a. 기존 (source_file, source_sha') 노드/엣지 DELETE (source_sha 변경 시만)
-   b. Pass 1: 모든 노드 INSERT (id 충돌 시 updated_at만 갱신)
-   c. Pass 2: 모든 엣지 INSERT (src/dst 존재 확인 → dangling 시 rollback + reject)
-   d. alias_merge 특수 엣지는 aliases 테이블로 라우팅
-5. manifest.json 갱신 + extraction_log.jsonl append
+1. Collect every .kg.json (papers/, research/, experiments/, docs/)
+2. Compute SHA256 per file
+3. Compare with manifest.json
+   - new / changed: Pydantic validate → on pass, upsert pipeline; on fail, append to rejected.jsonl
+   - removed: DELETE all nodes/edges for that (source_file)
+4. Upsert pipeline (transaction):
+   a. DELETE existing (source_file, source_sha') nodes/edges (only when source_sha changed)
+   b. Pass 1: INSERT all nodes (on id conflict, refresh updated_at only)
+   c. Pass 2: INSERT all edges (verify src/dst exist → rollback + reject on dangler)
+   d. alias_merge special edges route into the aliases table
+5. Update manifest.json + append to extraction_log.jsonl
 ```
 
-## 쿼리 인터페이스
+## Query interface
 
 ```bash
-# 노드 조회 (quote 주의: # 포함 id는 반드시 quote)
+# Node fetch (quote caveat: ids containing `#` MUST be quoted)
 python3 .claude/skills/paper-kg/scripts/query.py node "paper:iclr/2026/attack-lldm"
 
-# 이웃 탐색
+# Neighbor search
 python3 .claude/skills/paper-kg/scripts/query.py neighbors "method:gcg" --hops 2 --edge-type PROPOSES
 
-# fuzzy 검색 (alias check용)
+# Fuzzy lookup (for alias check)
 python3 .claude/skills/paper-kg/scripts/query.py lookup --type Method --name-fuzzy "Greedy Coord" --k 5
 
-# exact name 검색
+# Exact-name lookup
 python3 .claude/skills/paper-kg/scripts/query.py lookup --type Method --exact-name "GCG"
 
-# raw SQL (디버깅 전용)
+# Raw SQL (debugging only)
 python3 .claude/skills/paper-kg/scripts/query.py sql "SELECT type, COUNT(*) FROM nodes GROUP BY type"
 ```
 
-## Hybrid query 프로토콜 (answer-formulator·critic·planner)
+## Hybrid query protocol (answer-formulator / critic / planner)
 
 ```bash
 python3 .claude/skills/paper-kg/scripts/hybrid_query.py "question" --k 5
 ```
 
-출력 JSON 최상위 키: `query`, `rag`, `kg`, `hybrid`.
-내부 구현은 `paper-rag.query` module import로 subprocess 없이 호출.
+Top-level JSON keys: `query`, `rag`, `kg`, `hybrid`.
+Internally invokes `paper-rag.query` via module import — no subprocess.
 
-## Alias Check Protocol (에이전트 지침)
+## Alias Check Protocol (agent instruction)
 
-신규 `Method|Dataset|Model|Metric` 노드 생성 전:
+Before creating a new `Method|Dataset|Model|Metric` node:
 
-1. `lookup --type <T> --name-fuzzy "<candidate>" --k 5` 호출
-2. 결과를 보고 판단:
-   - **재사용**: 매칭된 기존 id를 `edges[].dst`로 사용 (새 노드 생성 X)
-   - **신규**: 새 id + `alias_check: {queried_existing: true, matched: null, rationale: "..."}` 기록
-   - **alias 추가**: `type: "alias_merge"` 특수 엣지로 기존 노드에 alias 추가
-3. Jaro-Winkler / WRatio 0.85+ AND 같은 도메인이면 재사용 권장
-4. 약자 vs 풀네임 매치 → 재사용, 풀네임을 aliases에 append
-5. 버전 차이(v1 vs v2) → 신규 + `DERIVED_FROM` 엣지
+1. Call `lookup --type <T> --name-fuzzy "<candidate>" --k 5`
+2. Decide from the result:
+   - **Reuse**: use the matched existing id as `edges[].dst` (no new node)
+   - **New**: new id + record `alias_check: {queried_existing: true, matched: null, rationale: "..."}`
+   - **Add alias**: append to the existing node via `type: "alias_merge"` special edge
+3. If Jaro-Winkler / WRatio ≥ 0.85 AND same domain, prefer reuse
+4. Abbrev vs. full name match → reuse; append the full name into aliases
+5. Version difference (v1 vs. v2) → new node + `DERIVED_FROM` edge
 
-**Bootstrap softening**: KG nodes < 50인 상태에서는 `alias_check.queried_existing: false`도 허용. schema.py의 `ALIAS_BOOTSTRAP_THRESHOLD` 상수가 이 경계를 고정한다.
+**Bootstrap softening**: when KG nodes < 50, `alias_check.queried_existing: false` is tolerated. The `ALIAS_BOOTSTRAP_THRESHOLD` constant in schema.py fixes this boundary.
 
-## Schema Enforcement (curator 체크리스트)
+## Schema enforcement (curator checklist)
 
-1. Pydantic validation (`KGFile`) 통과
-2. ID regex 매치 (§schema.py ID_REGEX)
-3. `nodes[].type` ↔ id prefix 일치
-4. `Method|Dataset|Model|Metric` 신규 노드는 `alias_check` 필수 (bootstrap 조건부)
-5. `EVIDENCED_BY` 엣지는 `meta.polarity ∈ {support, contradict, mixed}` 강제
-6. edges[].src/dst 가 같은 파일 nodes[] 또는 DB의 기존 id에 존재
-7. Provenance (source_file, source_sha, extracted_at) 필수
-8. Post-ingest exact-name collision 감지 → `rejected.jsonl`에 수동 검토 플래그
+1. Pydantic validation (`KGFile`) passes
+2. ID regex match (see schema.py ID_REGEX)
+3. `nodes[].type` ↔ id prefix consistency
+4. New `Method|Dataset|Model|Metric` nodes require `alias_check` (subject to bootstrap)
+5. `EVIDENCED_BY` edges enforce `meta.polarity ∈ {support, contradict, mixed}`
+6. edges[].src/dst exist in the same file's `nodes[]` or already in the DB
+7. Provenance (source_file, source_sha, extracted_at) required
+8. Post-ingest exact-name collision detection → flag in `rejected.jsonl` for manual review
 
-Reject된 파일은 `papers/vector_db/rejected.jsonl`에 이유와 함께 append. orchestrator가 이걸 읽어 원작 에이전트에 재dispatch.
+Rejected files are appended to `papers/vector_db/rejected.jsonl` with reasons. The orchestrator reads this and re-dispatches to the originating agent.
 
-## 환경 준비
+## Environment setup
 
 ```bash
 conda activate LLDM
 pip install pydantic rapidfuzz
 ```
 
-sqlite3는 Python stdlib이라 추가 설치 불필요.
+sqlite3 is in the Python stdlib, so no extra install.
 
-## 실패 모드
+## Failure modes
 
-- Pydantic 검증 실패: 해당 `.kg.json` 하나만 reject, 나머지는 정상 ingest
-- Dangling edge (src/dst 부재): 파일 전체 reject (트랜잭션 롤백)
-- `kg.sqlite` 손상: `extraction_log.jsonl` replay 또는 `index.py --rebuild`
-- manifest 손상: `index.py --rebuild-manifest` 로 해시 재계산
-- Post-ingest name collision: silent merge 금지, `rejected.jsonl` 수동 플래그
+- Pydantic validation failure: only that `.kg.json` is rejected; others ingest normally
+- Dangling edge (missing src/dst): entire file rejected (transaction rollback)
+- `kg.sqlite` corruption: replay `extraction_log.jsonl` or run `index.py --rebuild`
+- Corrupt manifest: recompute hashes via `index.py --rebuild-manifest`
+- Post-ingest name collision: no silent merge — flag manually in `rejected.jsonl`
 
-## 체크리스트
+## Checklist
 
-- [ ] `pydantic`, `rapidfuzz` 설치 확인
-- [ ] `papers/vector_db/kg.sqlite` 존재 (없으면 `db.open_and_migrate`로 생성)
-- [ ] `manifest.json` 초기화 또는 로드
-- [ ] `.kg.json` 증분 수집
+- [ ] `pydantic`, `rapidfuzz` installed
+- [ ] `papers/vector_db/kg.sqlite` exists (create via `db.open_and_migrate` if not)
+- [ ] `manifest.json` initialized or loaded
+- [ ] `.kg.json` files collected incrementally
 - [ ] 2-pass upsert (nodes → edges)
-- [ ] 쿼리 스모크 테스트 (`query.py node <id>` 1건 이상)
+- [ ] Query smoke test (≥ 1 `query.py node <id>` call)

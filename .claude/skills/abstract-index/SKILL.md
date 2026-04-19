@@ -1,69 +1,69 @@
 ---
 name: abstract-index
-description: "raw.md abstract indexer for paper-triage dense-retrieval pre-filter. Incremental bge-m3 upsert into ChromaDB collection 'abstracts'. Trigger: 'abstract 인덱싱', 'triage 전 사전 인덱스', 'abstracts collection 갱신'."
+description: "raw.md abstract indexer for paper-triage dense-retrieval pre-filter. Incremental bge-m3 upsert into ChromaDB collection 'abstracts'. Trigger: 'index abstracts', 'pre-index before triage', 'refresh abstracts collection'."
 ---
 
 # Abstract Index Skill
 
-paper-triage가 쓰는 `abstracts` ChromaDB 컬렉션을 증분 갱신하는 전용 스킬. `papers/marp-summary/**/*.md`를 다루는 `paper-rag`와 독립이고, 입력은 `papers/metadata/**/*.raw.md`의 abstract 본문이다.
+Dedicated skill that incrementally refreshes the `abstracts` ChromaDB collection used by paper-triage. Independent of `paper-rag` (which handles `papers/marp-summary/**/*.md`); the input is the abstract body of `papers/metadata/**/*.raw.md`.
 
-## 철학
-- **증분 전용**: SHA256 기반으로 변경된 raw.md만 re-embed.
-- **Non-destructive**: raw.md 미터치.
-- **Single document per paper**: abstract는 chunking하지 않고 `title + "\n\n" + abstract` 한 문서로 upsert.
-- **Separate collection**: `papers` 컬렉션과 분리. 혼합 쿼리 의미 훼손 방지.
+## Philosophy
+- **Incremental only**: re-embed only raw.md files that changed by SHA256.
+- **Non-destructive**: do not touch raw.md.
+- **Single document per paper**: abstracts are not chunked; upsert `title + "\n\n" + abstract` as one document.
+- **Separate collection**: kept separate from the `papers` collection to avoid semantic drift from mixed queries.
 
-## 스택
+## Stack
 - Embedding: `BAAI/bge-m3` via `sentence-transformers`
 - Store: `chromadb.PersistentClient(path="papers/vector_db/chroma")`, collection=`"abstracts"`
-- 해시: `hashlib.sha256(file_bytes)`
+- Hash: `hashlib.sha256(file_bytes)`
 - Manifest: `papers/vector_db/abstracts_manifest.json`
 
-## 파일 구조
+## File layout
 
 ```
 .claude/skills/abstract-index/
 ├── SKILL.md
 └── scripts/
-    └── index.py    증분/전체 인덱싱 (CLI)
+    └── index.py    incremental / full indexing (CLI)
 ```
 
-## 알고리즘
+## Algorithm
 
 ```
-1. papers/metadata/**/*.raw.md 전량 glob
-2. 각 파일 SHA256 계산
-3. abstracts_manifest.json의 기존 해시와 비교:
+1. Glob all papers/metadata/**/*.raw.md
+2. Compute SHA256 for each file
+3. Compare against existing hashes in abstracts_manifest.json:
    - new: collect_abstracts.extract() → title+abstract → embed → upsert
-   - changed: 기존 id를 delete → 새로 embed+upsert
-   - removed (manifest에 있는데 파일 없음): id를 delete
-4. manifest.json 저장 (last_update KST)
+   - changed: delete existing id → re-embed + upsert
+   - removed (present in manifest but file missing): delete id
+4. Save manifest.json (last_update KST)
 ```
 
-## 호출 예시
+## Invocation examples
 
 ```bash
-# 기본 실행 — 증분
+# Default run — incremental
 python3 .claude/skills/abstract-index/scripts/index.py
 
-# 매니페스트만 재계산 (Chroma upsert 안 함)
+# Rebuild manifest only (no Chroma upsert)
 python3 .claude/skills/abstract-index/scripts/index.py --rebuild-manifest
 
-# Chroma + manifest 전체 재구축
+# Rebuild both Chroma and manifest
 python3 .claude/skills/abstract-index/scripts/index.py --rebuild
 ```
 
-## 에러 처리
-- `sentence-transformers` / `chromadb` 미설치 → exit 3, `conda env LLDM` 활성화 요청
-- manifest 손상 (JSON parse 실패) → warning 후 빈 manifest로 진행 (사실상 full rebuild)
-- `## Abstract` 블록 없는 raw.md → `[warn]` 표시 후 skip (collection에 넣지 않음)
+## Error handling
+- `sentence-transformers` / `chromadb` not installed → exit 3, prompt to activate `conda env LLDM`
+- Corrupt manifest (JSON parse failure) → warn and proceed with empty manifest (effectively full rebuild)
+- raw.md without an `## Abstract` block → print `[warn]` and skip (not added to the collection)
 
-## 체크리스트
-- [ ] conda env LLDM 활성 (`chromadb`, `sentence-transformers` import 가능)
-- [ ] `papers/vector_db/chroma/` 쓰기 가능
-- [ ] manifest init or load 성공
-- [ ] 증분 인덱싱 완료
-- [ ] (최초 실행 시) abstracts 컬렉션 count > 0
+## Checklist
+- [ ] conda env LLDM active (`chromadb`, `sentence-transformers` importable)
+- [ ] `papers/vector_db/chroma/` writable
+- [ ] Manifest init or load succeeded
+- [ ] Incremental indexing complete
+- [ ] (On first run) abstracts collection count > 0
 
-## Lessons 연결
-작업 시작 전 `docs/lessons.md` + `docs/lessons-paper.md` Read.
+## Lessons hook
+Before starting, Read `docs/lessons.md` + `docs/lessons-paper.md`.

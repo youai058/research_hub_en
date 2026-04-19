@@ -1,6 +1,6 @@
 ---
 name: experiment-design
-description: "Phase A of the `experiments` stage. Produces research/plans/experiments/<slug>/v<N>/PLAN.md via the experiment-planner agent (+ critic review). Evidence↔Experiment 1:1 mapping, IV/DV/baseline/ablation, Expected Under / If Wrong thresholds. No code, no smoke. 트리거: 'experiments PLAN 작성', 'evidence 검증 실험 설계', 'Phase A experiments'."
+description: "Phase A of the `experiments` stage. Produces research/plans/experiments/<slug>/v<N>/PLAN.md via the experiment-planner agent (+ critic review). Evidence↔Experiment 1:1 mapping, IV/DV/baseline/ablation, Expected Under / If Wrong thresholds. No code, no smoke. Triggers: 'write experiments PLAN', 'design evidence verification experiment', 'Phase A experiments'."
 ---
 
 # Experiment Design Skill (Phase A of /research-experiments)
@@ -46,7 +46,7 @@ Rules:
 ### Resource budget (required, per-experiment)
 
 - GPU hours, disk space, API cost estimate.
-- If the plan requires paid API calls or edits to external LLM·LLDM repos (CLAUDE.md §2 stop condition "리소스 한계"), add an explicit `⚠ Requires user approval before E-1` note.
+- If the plan requires paid API calls or edits to external LLM·LLDM repos (CLAUDE.md §2 stop condition "resource limit"), add an explicit `⚠ Requires user approval before E-1` note.
 
 ### Prerequisite handling
 

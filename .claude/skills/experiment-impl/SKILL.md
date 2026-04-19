@@ -1,6 +1,6 @@
 ---
 name: experiment-impl
-description: "Phase C E-1→E-2→E-3 of the `experiments` stage. Sequential blocking: code-implementer (E-1) → implementation-verifier (E-2) → codex-reviewer (E-3) → run smoke test. Consumes research/plans/experiments/<slug>/v<N>/PLAN.md, produces experiments/<slug>/{code,configs,run.sh,IMPL_MAP.md}. 트리거: 'experiment impl 실행', 'E-1 구현', 'Phase C experiments', 'run smoke'."
+description: "Phase C E-1→E-2→E-3 of the `experiments` stage. Sequential blocking: code-implementer (E-1) → implementation-verifier (E-2) → codex-reviewer (E-3) → run smoke test. Consumes research/plans/experiments/<slug>/v<N>/PLAN.md, produces experiments/<slug>/{code,configs,run.sh,IMPL_MAP.md}. Triggers: 'run experiment impl', 'E-1 implement', 'Phase C experiments', 'run smoke'."
 ---
 
 # Experiment Implementation Skill (Phase C of /research-experiments)

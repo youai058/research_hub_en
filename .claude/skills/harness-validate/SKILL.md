@@ -1,82 +1,82 @@
 ---
 name: harness-validate
-description: "하네스 전체 구조 검증. settings.json JSON 유효성, agents/skills/commands frontmatter, 훅 스크립트 +x, MCP 등록, description 트리거 충돌, 네이밍 규약. harness-engineer 편집 직후 필수. 트리거: '하네스 검증', '구조 체크', '하네스 헬스체크', '설정 유효성'."
+description: "Validate the entire harness structure. settings.json JSON validity, agents / skills / commands frontmatter, hook script +x, MCP registration, description trigger conflicts, naming conventions. Mandatory immediately after harness-engineer edits. Triggers: 'validate harness', 'structure check', 'harness healthcheck', 'settings validity'."
 ---
 
 # Harness Validator
 
-하네스 수정 후 반드시 실행하는 구조 검증 스킬. 실패는 즉시 중단하고 사용자에게 보고한다.
+The structural validator skill to run after every harness edit. On failure, stop immediately and report to the user.
 
-## 검증 항목
+## Checks
 
-### 1. settings.json 구문
+### 1. settings.json syntax
 
-- `.claude/settings.json`, `.claude/settings.local.json`, `~/.claude/settings.json` 각각 존재하면 JSON parse
-- `python3 -c "import json; json.load(open('PATH'))"` 로 검사
-- 실패 시 **즉시 중단** — 파싱 실패한 settings는 세션을 망가뜨린다
+- JSON-parse `.claude/settings.json`, `.claude/settings.local.json`, `~/.claude/settings.json` if present
+- Use `python3 -c "import json; json.load(open('PATH'))"`
+- On failure, **abort immediately** — a non-parsing settings file breaks the session
 
-### 2. settings.json 스키마
+### 2. settings.json schema
 
 - `permissions.defaultMode` ∈ {`plan`, `default`, `acceptEdits`, `bypassPermissions`}
-- `permissions.allow`/`deny`/`ask` 엔트리가 `ToolName(pattern)` 형식
-- `statusLine.type == "command"`이면 `command` 키 존재 + 경로 실제 존재
-- `hooks.{Event}` 배열 각 항목에 `matcher`(선택)와 `hooks[]` 존재
-- `hooks[].command` 경로가 실제 파일로 존재, 실행 권한(`os.access(path, os.X_OK)`)
+- Each `permissions.allow` / `deny` / `ask` entry has form `ToolName(pattern)`
+- If `statusLine.type == "command"`, the `command` key exists and the path exists
+- Each item in `hooks.{Event}` array has `matcher` (optional) and `hooks[]`
+- `hooks[].command` paths exist as real files with execute permission (`os.access(path, os.X_OK)`)
 
 ### 3. Agents (`.claude/agents/*.md`)
 
-- frontmatter parse (YAML)
-- 필수 키: `name`, `description`
-- 권장 키: `model: opus` (opus 아니면 경고)
-- `name`이 파일명(확장자 제외)과 일치
-- 본문에 6개 섹션(핵심 역할/작업 원칙/입출력 프로토콜/팀 통신 프로토콜/에러 핸들링/협업) 헤딩 존재 (경고 레벨)
+- Frontmatter parses (YAML)
+- Required keys: `name`, `description`
+- Recommended: `model: opus` (warn otherwise)
+- `name` matches filename (sans extension)
+- Body contains 6 section headings (Core Role / Working Principles / I/O Protocol / Team Comms / Error Handling / Collaboration) (warn-level)
 
 ### 4. Skills (`.claude/skills/*/SKILL.md`)
 
-- frontmatter parse
-- 필수: `name`, `description`
-- `name`이 디렉토리명과 일치
-- 본문 줄 수 ≤500 (경고, 초과 시 references 분리 제안)
-- 300줄 이상 `references/*.md` 파일에 목차 존재 여부 (경고)
+- Frontmatter parses
+- Required: `name`, `description`
+- `name` matches the directory name
+- Body line count ≤ 500 (warning; suggest splitting to references on overflow)
+- `references/*.md` files > 300 lines should have a table of contents (warning)
 
 ### 5. Slash commands (`.claude/commands/**/*.md`)
 
-- frontmatter parse (선택이지만 있으면 유효해야 함)
-- `allowed-tools` 있으면 배열이어야 함
-- 본문에 `$ARGUMENTS`/`$1..9` 있으면 `argument-hint` frontmatter 권장
+- Frontmatter parses (optional, but if present must be valid)
+- If `allowed-tools` is present, it must be an array
+- If body contains `$ARGUMENTS` / `$1..9`, recommend an `argument-hint` in frontmatter
 
 ### 6. Hooks
 
-- settings.json의 `hooks` 키에 등록된 커맨드 경로가 실제 존재
-- `.claude/hooks/*.py`/`*.sh` 실행 권한 확인
-- Python 스크립트는 `python3 -c "import ast; ast.parse(open('PATH').read())"`로 구문 검사
+- Command paths registered under settings.json's `hooks` key actually exist
+- Check execute permission on `.claude/hooks/*.py` / `*.sh`
+- Syntax-check Python scripts: `python3 -c "import ast; ast.parse(open('PATH').read())"`
 
 ### 7. MCP
 
-- `.mcp.json` 존재 시 JSON parse
+- If `.mcp.json` exists, JSON-parse it
 - `mcpServers.{name}.type` ∈ {`stdio`, `sse`, `http`}
-- stdio 서버의 `command` 경로 존재 확인 (절대 경로인 경우)
+- For stdio servers, verify `command` path exists (if absolute)
 
-### 8. Trigger 충돌
+### 8. Trigger conflicts
 
-- 모든 skill description을 수집
-- 페어 단위로 의미적 중복 검사 (단순 키워드 overlap 기반 1차 필터)
-- 중복 후보를 경고로 출력
+- Gather every skill description
+- Pairwise semantic-duplicate check (first pass via simple keyword overlap)
+- Print duplicate candidates as warnings
 
-## 실행 방식
+## Execution
 
-검증 스크립트는 `.claude/skills/harness-validate/scripts/validate.py`로 번들링(아래 템플릿 참고)하고 다음과 같이 호출한다:
+Bundle the validator as `.claude/skills/harness-validate/scripts/validate.py` (see template below) and invoke:
 
 ```bash
 python3 .claude/skills/harness-validate/scripts/validate.py /home/irteam/sw
 ```
 
-종료 코드:
-- `0`: 모든 검사 통과
-- `1`: 경고만 존재 (수정 권장)
-- `2`: 치명적 오류 (세션 위험, 즉시 중단)
+Exit codes:
+- `0`: all checks passed
+- `1`: warnings only (fix recommended)
+- `2`: fatal error (session at risk, abort immediately)
 
-## 보고 형식
+## Report format
 
 ```
 == Harness Validation Report ==
@@ -86,20 +86,20 @@ python3 .claude/skills/harness-validate/scripts/validate.py /home/irteam/sw
 [ERROR] settings.json: hooks.PreToolUse[0].command → path not executable
 ```
 
-치명적 오류(`[ERROR]`)가 하나라도 있으면 harness-engineer는 롤백하거나 사용자에게 수정 요청.
+If there is any `[ERROR]`, harness-engineer must roll back or request a fix from the user.
 
-## 호출 시점
+## When to invoke
 
-1. harness-settings / harness-hooks / harness-agent-author / harness-skill-author / harness-command-author / harness-mcp 스킬이 편집 완료한 **직후**
-2. 사용자가 "하네스 체크"를 명시 요청할 때
-3. 세션 시작 직후 hook(`SessionStart`)에서 자동 실행 (선택)
+1. **Immediately after** harness-settings / harness-hooks / harness-agent-author / harness-skill-author / harness-command-author / harness-mcp finish editing
+2. When the user explicitly requests "check harness"
+3. Optionally: auto-run from a `SessionStart` hook at session start
 
-## 체크리스트
+## Checklist
 
-- [ ] settings.json 3개 계층 모두 유효
-- [ ] 모든 agents frontmatter 유효, name==파일명
-- [ ] 모든 skills frontmatter 유효, 500줄 룰
-- [ ] hooks 경로 존재 + 실행 권한
-- [ ] MCP JSON 유효 + type 올바름
-- [ ] trigger 중복 검사 수행
-- [ ] 보고서 출력, ERROR면 중단
+- [ ] All 3 layers of settings.json valid
+- [ ] All agents frontmatter valid; name == filename
+- [ ] All skills frontmatter valid; 500-line rule
+- [ ] Hook paths exist + execute permission
+- [ ] MCP JSON valid + type correct
+- [ ] Trigger-duplication check executed
+- [ ] Report printed; abort on ERROR
