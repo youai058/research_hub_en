@@ -1,165 +1,165 @@
-# Harness Layout (CLAUDE.md §5·§7 분리본)
+# Harness Layout (split out of CLAUDE.md §5/§7)
 
 ## Directory Structure
 
 ```
 research_hub/
-├── CLAUDE.md                 (이 파일)
+├── CLAUDE.md                 (this file's parent contract)
 ├── docs/
-│   ├── lessons.md            전역 lessons
-│   ├── lessons-paper.md      논문 수집·요약·RAG
-│   ├── lessons-research.md   답변 formulate·근거 비판·검증 계획
-│   ├── lessons-impl.md       코드 구현·검증
-│   └── lessons-analysis.md   결과 분석
+│   ├── lessons.md            global lessons
+│   ├── lessons-paper.md      paper collection / summarization / RAG
+│   ├── lessons-research.md   answer formulation / evidence critique / verification planning
+│   ├── lessons-impl.md       code implementation / verification
+│   └── lessons-analysis.md   result analysis
 ├── .claude/
 │   ├── settings.json
-│   ├── agents/               14종 에이전트 정의 (+ harness-engineer, kg-curator, paper-triage, abstract-indexer, codex-reviewer)
-│   ├── skills/               22종 스킬 (research 12 + paper-kg + harness-* 7 + experiments 3: experiment-design/impl/report)
-│   ├── hooks/                8종 (session_start, mark_indices_stale, protect_chroma, protect_kg, protect_external_paths, guard_empty_rag advisory-only, phase_advance_check, inject_lessons)
-│   ├── scripts/              유틸리티 (loop_state.py v3 + report_builder.py + lesson.py)
-│   └── commands/             10종 (/research-papers, /research-qa, /research-experiments, /research-analyze, /research-status, /research-rag, /research-index, /research-lesson, /research-kg, /research-triage)
+│   ├── agents/               14 agent definitions (+ harness-engineer, kg-curator, paper-triage, abstract-indexer, codex-reviewer)
+│   ├── skills/               22 skill bundles (research 12 + paper-kg + harness-* 7 + experiments 3: experiment-design / impl / report)
+│   ├── hooks/                8 hooks (session_start, mark_indices_stale, protect_chroma, protect_kg, protect_external_paths, guard_empty_rag advisory-only, phase_advance_check, inject_lessons)
+│   ├── scripts/              utilities (loop_state.py v3 + report_builder.py + lesson.py)
+│   └── commands/             10 slash commands (/research-papers, /research-qa, /research-experiments, /research-analyze, /research-status, /research-rag, /research-index, /research-lesson, /research-kg, /research-triage)
 ├── papers/
-│   ├── metadata/<Venue>/<Year>/<slug>.raw.md   paper-hunter 원본 메타
-│   ├── marp-summary/<Venue>/<Year>/<slug>.md   adaptive Marp 요약 (PLANNING-first, 4 앵커)
+│   ├── metadata/<Venue>/<Year>/<slug>.raw.md   paper-hunter raw metadata
+│   ├── marp-summary/<Venue>/<Year>/<slug>.md   adaptive Marp summary (PLANNING-first, 4 anchors)
 │   ├── digest/<Venue>/<Year>/
 │   │   ├── <slug>.digest.md                    Gemini Stage-1 digest
-│   │   └── .pdf_cache/<slug>.pdf               PDF 캐시
+│   │   └── .pdf_cache/<slug>.pdf               PDF cache
 │   └── vector_db/
-│       ├── chroma/                   ChromaDB persistent store (index.py가 자동 생성)
-│       ├── manifest.json            RAG 해시·mtime 증분 상태
-│       ├── kg.sqlite                SQLite triplestore
-│       ├── kg-manifest.json         KG 해시·ingest 상태
-│       ├── extraction_log.jsonl     KG audit log
-│       ├── rejected.jsonl           KG validation fail log
-│       ├── schema.version           KG schema version
-│       ├── rag.stale                RAG stale marker
-│       ├── kg.stale                 KG stale marker
-│       └── kg-staging/              .kg.json 부산물 수집 대기
+│       ├── chroma/                   ChromaDB persistent store (auto-created by index.py)
+│       ├── manifest.json             RAG hash / mtime incremental state
+│       ├── kg.sqlite                 SQLite triplestore
+│       ├── kg-manifest.json          KG hash / ingest state
+│       ├── extraction_log.jsonl      KG audit log
+│       ├── rejected.jsonl            KG validation fail log
+│       ├── schema.version            KG schema version
+│       ├── rag.stale                 RAG stale marker
+│       ├── kg.stale                  KG stale marker
+│       └── kg-staging/               staging area for .kg.json byproducts
 ├── research/
-│   ├── answers/YYYY-MM-DD_<slug>.md  answer-formulator 산출 (Direct Answer + Evidence Chain)
-│   ├── critiques/<slug>.md           근거 체인 4축 비판
+│   ├── answers/YYYY-MM-DD_<slug>.md  answer-formulator output (Direct Answer + Evidence Chain)
+│   ├── critiques/<slug>.md           4-axis evidence-chain critique
 │   ├── diagnoses/<slug>.md           Evidence verification outcome + revision seed
-│   ├── topics/<slug>.md              paper-triage run log (append-only, runtime only; A-2에서 생성)
+│   ├── topics/<slug>.md              paper-triage run log (append-only, runtime only; created at A-2)
 │   ├── plans/
-│   │   ├── <slug>/PLAN.md            experiment-level PLAN (code-implementer 소비, 기존 평탄 경로 유지)
-│   │   └── <stage>/<slug>/v<N>/PLAN.md   stage-level PLAN (Phase A 산출, 버전링) — stage ∈ {papers, qa, experiments, analyze}
+│   │   ├── <slug>/PLAN.md            experiment-level PLAN (consumed by code-implementer; flat legacy path)
+│   │   └── <stage>/<slug>/v<N>/PLAN.md   stage-level PLAN (Phase A output, versioned) — stage ∈ {papers, qa, experiments, analyze}
 │   ├── reports/
 │   │   └── <stage>/<slug>/v<N>/
-│   │       ├── Report.md             stage Phase C 종료 산출 (md)
-│   │       └── Report.slides.md      stage Phase C 종료 산출 (Marp 슬라이드)
-│   └── loop_state.json               현재 루프 단계 (v3 schema)
+│   │       ├── Report.md             stage Phase C terminal artifact (md)
+│   │       └── Report.slides.md      stage Phase C terminal artifact (Marp slides)
+│   └── loop_state.json               current loop position (v3 schema)
 ├── experiments/
 │   └── <slug>/
 │       ├── code/
 │       ├── configs/
 │       ├── run.sh
-│       └── IMPL_MAP.md               Evidence ↔ Experiment ↔ Code 3-way 매핑
+│       └── IMPL_MAP.md               Evidence ↔ Experiment ↔ Code 3-way mapping
 ├── harness/
-│   └── plans/<name>/                 하네스 인프라 PLAN (루프와 직교; 예: stage-split)
-└── results_<slug>/                   실험 산출물
+│   └── plans/<name>/                 harness-infra PLAN (orthogonal to the research loop; e.g. stage-split)
+└── results_<slug>/                   experiment artifacts
 ```
 
-> **단종 커맨드**: `/research-start`, `/research-autonomous` 두 커맨드는 v3 refactor에서 폐지됐다. 대체 경로: 새 사이클은 `/research-papers <topic>` (또는 필요한 stage 커맨드 직접 호출)로 시작. autonomous 모드 자체가 제거됐으므로 on/off 개념은 없다.
+> **Discontinued commands**: `/research-start` and `/research-autonomous` were removed in the v3 refactor. Replacement path: start a new cycle with `/research-papers <topic>` (or call the needed stage command directly). Autonomous mode itself was removed, so there is no on/off concept.
 
 ## 9 Configuration Surfaces
 
-Claude Code 하네스는 9종 configuration surface를 노출한다. research_hub는 **6종을 적극 사용**하고 3종은 의도적으로 미사용이다.
+The Claude Code harness exposes 9 configuration surfaces. research_hub **actively uses 6** and intentionally leaves 3 unused.
 
-### 사용 중 (6종)
+### In use (6)
 
-| # | Surface | 경로 | 용도 |
+| # | Surface | Path | Purpose |
 |---|---|---|---|
-| 1 | settings.json | `.claude/settings.json` | permissions, env, hooks 등록, statusLine |
-| 2 | agents | `.claude/agents/*.md` | 14종 페르소나 정의 (paper-hunter, paper-triage, abstract-indexer, codex-reviewer, ...) |
-| 3 | skills | `.claude/skills/*/SKILL.md` | 22종 절차적 스킬 (progressive disclosure) |
-| 4 | commands | `.claude/commands/*.md` | 10종 slash command |
-| 5 | hooks | `.claude/hooks/*` + settings.json `hooks` | 8종 (아래 표 참조) |
-| 6 | CLAUDE.md / memory | `./CLAUDE.md`, `docs/lessons*.md` | 역할·워크플로우·자기개선 루프 SSOT |
+| 1 | settings.json | `.claude/settings.json` | permissions, env, hook registration, statusLine |
+| 2 | agents | `.claude/agents/*.md` | 14 personas (paper-hunter, paper-triage, abstract-indexer, codex-reviewer, ...) |
+| 3 | skills | `.claude/skills/*/SKILL.md` | 22 procedural skills (progressive disclosure) |
+| 4 | commands | `.claude/commands/*.md` | 10 slash commands |
+| 5 | hooks | `.claude/hooks/*` + settings.json `hooks` | 8 hooks (see table below) |
+| 6 | CLAUDE.md / memory | `./CLAUDE.md`, `docs/lessons*.md` | SSOT for role / workflow / self-improvement loop |
 
-### Commands 상세 (10종)
+### Commands detail (10)
 
-4개 stage 커맨드 + 6개 관리/조회 커맨드:
+4 stage commands + 6 management/inspection commands:
 
-| # | 커맨드 | 종류 | 역할 |
+| # | Command | Type | Role |
 |---|---|---|---|
 | 1 | `/research-papers <topic>` | stage | `papers` stage Phase A→B→C. paper-hunter → paper-triage → paper-summarizer → rag-curator. |
-| 2 | `/research-qa <slug> <question>` | stage | `qa` stage Phase A→B→C. answer-formulator → critic (+ codex-reviewer 병렬). |
-| 3 | `/research-experiments <slug>` | stage | `experiments` stage Phase A→B→C. 내부 3 스킬 (experiment-design / experiment-impl / experiment-report). E-1 → E-2 → E-3 → report. |
+| 2 | `/research-qa <slug> <question>` | stage | `qa` stage Phase A→B→C. answer-formulator → critic (+ codex-reviewer parallel). |
+| 3 | `/research-experiments <slug>` | stage | `experiments` stage Phase A→B→C. 3 internal skills (experiment-design / experiment-impl / experiment-report). E-1 → E-2 → E-3 → report. |
 | 4 | `/research-analyze <slug>` | stage | `analyze` stage Phase A→B→C. results-analyst (F-1) → codex-reviewer (F-2). diagnosis + revision seed. |
-| 5 | `/research-status` | 조회 | `loop_state.json` v3 필드 + RAG 인덱스 + KG + lessons 카운트 요약. |
-| 6 | `/research-rag <query>` | 조회 | RAG top-k ad-hoc 쿼리. 인덱싱 안 함. |
-| 7 | `/research-index` | 관리 | RAG 증분(기본) 또는 `--rebuild` 전체 재인덱스. |
-| 8 | `/research-lesson <domain> "<title>"` | 관리 | 해당 `docs/lessons*.md`에 3-line 엔트리 append (Rule/Why/When). |
-| 9 | `/research-kg <build\|query\|node\|lookup\|stats>` | 관리 | SQLite KG 하위 커맨드 분배. |
-| 10 | `/research-triage` | 관리 | raw.md 수집본을 주제 기준 Claude-native 점수화. |
+| 5 | `/research-status` | inspect | Summary of `loop_state.json` v3 fields + RAG index + KG + lessons counts. |
+| 6 | `/research-rag <query>` | inspect | Ad-hoc RAG top-k query. Does not index. |
+| 7 | `/research-index` | manage | RAG incremental (default) or `--rebuild` full re-index. |
+| 8 | `/research-lesson <domain> "<title>"` | manage | Append a 3-line entry (Rule/Why/When) to the appropriate `docs/lessons*.md`. |
+| 9 | `/research-kg <build\|query\|node\|lookup\|stats>` | manage | SQLite KG subcommand dispatcher. |
+| 10 | `/research-triage` | manage | Score raw.md collections against a topic via Claude-native rubric. |
 
-### Hooks 상세 (8종)
+### Hooks detail (8)
 
-| # | 파일 | 이벤트 | 역할 |
+| # | File | Event | Role |
 |---|---|---|---|
-| 1 | `session_start.sh` | SessionStart | v3 스키마 (stage/inner_phase/sub_phase/slug/stage_version) + RAG/KG/lessons 카운트 주입. autonomous 블록 제거됨. |
-| 2 | `mark_indices_stale.sh` | PostToolUse(Write\|Edit\|MultiEdit) | papers/ 수정 시 RAG·KG stale 마커 touch |
-| 3 | `protect_chroma.sh` | PreToolUse(Write\|Edit) | `papers/vector_db/chroma/` 내부 파일 직접 수정 차단 |
-| 4 | `protect_kg.sh` | PreToolUse(Write\|Edit) | `papers/vector_db/kg.sqlite` 직접 수정 차단 |
-| 5 | `protect_external_paths.sh` | PreToolUse(Write\|Edit\|MultiEdit\|Bash) | research_hub 바깥(특히 LLM/LLDM/~/.claude) 쓰기 및 유료 API·HF 다운로드 차단 |
-| 6 | `guard_empty_rag.sh` | PreToolUse(Bash) | **advisory-only (v3)**: RAG manifest가 비었을 때 `/answer-formulate`·`/critique`·`/research-qa` 등에 stderr 경고만 (차단 안 함). `RESEARCH_HUB_GUARD_QUIET=1`로 silencing 가능. |
-| 7 | `phase_advance_check.sh` | Stop | v3 스키마 기반 stage × sub_phase 상태 보고 sub-phase advance 또는 `stage-complete` 시기 advisory 출력 (mutate 금지). |
-| 8 | `inject_lessons.sh` | UserPromptSubmit | 전역 `lessons.md` 최근 3 엔트리 + 도메인 카운트를 프롬프트에 주입 |
+| 1 | `session_start.sh` | SessionStart | Inject v3 schema (stage/inner_phase/sub_phase/slug/stage_version) + RAG/KG/lessons counts. The autonomous block was removed. |
+| 2 | `mark_indices_stale.sh` | PostToolUse(Write\|Edit\|MultiEdit) | On modifications under `papers/`, touch RAG/KG stale markers |
+| 3 | `protect_chroma.sh` | PreToolUse(Write\|Edit) | Block direct edits to files inside `papers/vector_db/chroma/` |
+| 4 | `protect_kg.sh` | PreToolUse(Write\|Edit) | Block direct edits to `papers/vector_db/kg.sqlite` |
+| 5 | `protect_external_paths.sh` | PreToolUse(Write\|Edit\|MultiEdit\|Bash) | Block writes outside research_hub (esp. LLM / LLDM / ~/.claude) and paid API / HF downloads |
+| 6 | `guard_empty_rag.sh` | PreToolUse(Bash) | **advisory-only (v3)**: if the RAG manifest is empty, emit a stderr warning (not blocking) for `/answer-formulate` / `/critique` / `/research-qa`. Silenceable via `RESEARCH_HUB_GUARD_QUIET=1`. |
+| 7 | `phase_advance_check.sh` | Stop | v3-schema based stage × sub_phase status reporting; emits advisory on when to sub-phase-advance or `stage-complete` (no mutation). |
+| 8 | `inject_lessons.sh` | UserPromptSubmit | Inject the last 3 entries of global `lessons.md` + domain counts into the prompt |
 
-### 의도적 미사용 (3종)
+### Intentionally unused (3)
 
-| # | Surface | 사유 |
+| # | Surface | Rationale |
 |---|---|---|
-| 7 | MCP servers (`.mcp.json`) | 모든 외부 I/O는 Python 스크립트(`.claude/scripts/`) + 훅 경로로 집행. MCP 도입 시 권한·감사 surface가 이중화되므로 보류. repo-level `.mcp.json`은 `{"mcpServers": {}}` 의도적 빈 스텁으로 유지. |
-| 8 | output-styles (`.claude/output-styles/*.md`) | Marp 5-part 포맷이 이미 `paper-summarize` 스킬에 하드코딩되어 있어 전역 출력 스타일 변경이 불필요. |
-| 9 | keybindings (`~/.claude/keybindings.json`) | user global 영역이고 머신/운영자별 선호이므로 repo에서 관리하지 않음. 필요 시 개별 사용자가 직접 편집. |
+| 7 | MCP servers (`.mcp.json`) | All external I/O is executed via Python scripts (`.claude/scripts/`) + hook paths. Adding MCP duplicates the permissions/audit surface, so postponed. The repo-level `.mcp.json` is kept as an intentionally empty stub `{"mcpServers": {}}`. |
+| 8 | output-styles (`.claude/output-styles/*.md`) | The paper summary format is already encoded in the `paper-summarize` skill, so a global output-style change is unnecessary. |
+| 9 | keybindings (`~/.claude/keybindings.json`) | This is the user global area and is machine/operator specific, so not managed at the repo level. Individual users edit directly if needed. |
 
-## 에이전트 팀 구성
+## Agent Team
 
-| 에이전트 | 전문 영역 | 활성 Sub-phase | 소속 stage |
+| Agent | Specialization | Active sub-phase | Stage |
 |---------|---------|-----------|---|
-| paper-hunter | venue API 스캔·수집 | A-1 | papers |
-| abstract-indexer | raw.md abstract를 bge-m3로 embed해 ChromaDB `abstracts` collection에 증분 upsert. A-2 triage의 dense-retrieval pre-filter용. | A-1.5 | papers |
-| paper-triage | abstract 기반 Claude-native 관련도 점수화(0-5) + accepted 필터 | A-2 | papers |
-| paper-summarizer | 5-part 비판적 요약 | A-3 | papers |
-| rag-curator | 임베딩·벡터 스토어 유지 | A-4 (주), 모든 sub-phase 끝단 선택 호출 | papers |
-| answer-formulator | hybrid_query → Direct Answer + Evidence Chain (divergent ideation 금지) | B-1 | qa |
-| critic | 근거 체인 4축 독립 비판 (Grounding/Support/Counter-Evidence/Verifiability) | B-2, 실험 설계 검토 보조 | qa, experiments |
-| experiment-planner | Evidence 1:1 verification 실험 설계 (Expected Under/If Wrong 사전 명시) | C-1 (experiments Phase A) | experiments |
-| code-implementer | 코드 구현·외부 레포 통합 (3-way IMPL_MAP + decide_verdict) | E-1 | experiments |
-| implementation-verifier | incremental QA + Evidence verification boundary 확인 | E-2 | experiments |
-| results-analyst | Evidence 단위 verdict (CONFIRMED/REFUTED/INCONCLUSIVE/IMPL_BUG) + diagnosis·시각화 | F-1 | analyze |
-| kg-curator | SQLite KG 증분 ingest·검증·쿼리 | 모든 sub-phase 끝단 (kg `.stale` 감지 시) | cross-stage |
-| codex-reviewer | Codex CLI 기반 3rd-party adversarial review | B-2 (critic 병렬), E-3 (최종 게이트), F-2 (최종 게이트) | qa, experiments, analyze |
-| harness-engineer | Claude Code 하네스(9 surface) 구성·수정 | out-of-loop | — |
+| paper-hunter | venue API scan / collection | A-1 | papers |
+| abstract-indexer | embed raw.md abstracts via bge-m3 and incrementally upsert to ChromaDB `abstracts` collection. Powers the dense-retrieval pre-filter for A-2 triage. | A-1.5 | papers |
+| paper-triage | abstract-based Claude-native relevance scoring (0-5) + accepted filter | A-2 | papers |
+| paper-summarizer | Adaptive critical summary | A-3 | papers |
+| rag-curator | embedding / vector store maintenance | A-4 (primary), optionally at the tail of any sub-phase | papers |
+| answer-formulator | hybrid_query → Direct Answer + Evidence Chain (no divergent ideation) | B-1 | qa |
+| critic | 4-axis independent evidence critique (Grounding/Support/Counter-Evidence/Verifiability) | B-2, assist during experiment design review | qa, experiments |
+| experiment-planner | Evidence 1:1 verification experiment design (Expected Under / If Wrong specified upfront) | C-1 (experiments Phase A) | experiments |
+| code-implementer | code implementation / external repo integration (3-way IMPL_MAP + decide_verdict) | E-1 | experiments |
+| implementation-verifier | incremental QA + Evidence-verification boundary checks | E-2 | experiments |
+| results-analyst | per-Evidence verdict (CONFIRMED/REFUTED/INCONCLUSIVE/IMPL_BUG) + diagnosis / visualization | F-1 | analyze |
+| kg-curator | SQLite KG incremental ingest / validation / query | at the tail of every sub-phase (when `kg.stale` is detected) | cross-stage |
+| codex-reviewer | Codex CLI based third-party adversarial review | B-2 (parallel to critic), E-3 (final gate), F-2 (final gate) | qa, experiments, analyze |
+| harness-engineer | Claude Code harness (9 surface) configuration / modification | out-of-loop | — |
 
-## Stage × Phase 요약
+## Stage × Phase summary
 
-| Stage | STAGE_SUBPHASES (Phase C 체인) | 산출물 |
+| Stage | STAGE_SUBPHASES (Phase C chain) | Artifacts |
 |---|---|---|
 | `papers` | A-1 → A-2 → A-3 → A-4 | `papers/marp-summary/<V>/<Y>/*.md`, `research/reports/papers/<slug>/v<N>/` |
 | `qa` | B-1 → B-2 | `research/answers/`, `research/critiques/`, `research/reports/qa/<slug>/v<N>/` |
 | `experiments` | (C-1 satisfied in Phase A) → E-1 → E-2 → E-3 + experiment-report skill | `experiments/<slug>/`, `research/reports/experiments/<slug>/v<N>/` |
 | `analyze` | F-1 → F-2 | `research/diagnoses/`, `research/reports/analyze/<slug>/v<N>/` |
 
-`STAGE_SUBPHASES`는 `loop_state.py` 단일 SSOT로 정의됨. **Stage 간 auto-chain 금지**.
+`STAGE_SUBPHASES` is defined once in `loop_state.py` as the single SSOT. **No auto-chain between stages.**
 
 ## Versioning
 
-- 동일 `<stage, slug>` 조합 재실행 시 `loop_state.py stage-enter`가 `research/plans/<stage>/<slug>/v*/` + `research/reports/<stage>/<slug>/v*/` 글롭 → `max(existing) + 1`을 `stage_version`에 할당.
-- PLAN.md · Report.md · Report.slides.md는 `v<N>/` 하위. **이전 버전 수정·삭제 금지**.
-- `latest` 심볼릭 링크는 선택적 편의 (실패해도 치명적 아님).
-- 60일 이상 된 stage 버전 디렉토리는 수동 정리 권장.
+- When the same `<stage, slug>` combination is re-run, `loop_state.py stage-enter` globs `research/plans/<stage>/<slug>/v*/` + `research/reports/<stage>/<slug>/v*/` and assigns `max(existing) + 1` to `stage_version`.
+- PLAN.md / Report.md / Report.slides.md all live under `v<N>/`. **Do NOT edit or delete previous versions.**
+- The `latest` symlink is an optional convenience (non-fatal on failure).
+- Manually pruning stage version directories older than 60 days is recommended.
 
-## Phase B 트리거 whitelist
+## Phase B trigger whitelist
 
-상세는 CLAUDE.md §4.3 + `.claude/scripts/loop_state.py` TRIGGER_WHITELIST 참조 (SSOT 2곳, Dedup Stage 1 lesson 2026-04-15).
+See CLAUDE.md §4.3 and `.claude/scripts/loop_state.py` TRIGGER_WHITELIST for details (2 SSOT locations — Dedup Stage 1 lesson 2026-04-15).
 
-자세한 워크플로우는 각 stage slash command (`.claude/commands/research-*.md`)와 `CLAUDE.md §4`에 정의되어 있다.
+Detailed workflows live in each stage slash command (`.claude/commands/research-*.md`) and CLAUDE.md §4.
 
 ## Dispatch rules (2026-04-16 refactor)
 
-- Phase A PLAN.md writers are the four specialist planners (`paper-hunter`, `answer-formulator`, `experiment-planner`, `results-analyst`) dispatched by the stage slash command with `mode=plan-only` and `run_in_background: true`.
+- Phase A PLAN.md writers are the four specialist planners (`paper-hunter`, `answer-formulator`, `experiment-planner`, `results-analyst`), dispatched by the stage slash command with `mode=plan-only` and `run_in_background: true`.
 - Phase C sub-phases are owned by the stage slash command, which dispatches each sub-phase as a separate `Agent(..., run_in_background=true)` call and verifies the artifact between dispatches.
 - The only main-session (foreground) step is the `topic-refine` skill in `/research-papers`, which is interactive by nature.
 - No agent delegates to another agent. Orchestration is a main-session responsibility.

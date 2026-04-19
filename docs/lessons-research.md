@@ -6,9 +6,9 @@ covers: [answer-formulator, critic, experiment-planner]
 
 # Lessons — Research (answer-formulate / critique / experiment-plan)
 
-answer-formulator, critic, experiment-planner가 작업 시작 전에 이 파일을 Read한다. append-only — 기존 엔트리 편집 금지, 신규만 append.
+answer-formulator, critic, and experiment-planner MUST Read this file before starting work. Append-only — do not edit existing entries, only append new ones.
 
-Phase B-1/B-2/C-1 도메인: Direct Answer + Evidence Chain 작성, 근거 4축 비판, Evidence verification 실험 계획. (2026-04-15 이전 엔트리는 divergent ideation 프레임 기준이므로 과거 라벨 그대로 보존.)
+Phase B-1/B-2/C-1 domain: Direct Answer + Evidence Chain writing, 4-axis evidence critique, Evidence verification experiment planning. (Entries before 2026-04-15 use the divergent-ideation framing; legacy labels are preserved as-is.)
 
 ## How to add
 
@@ -18,24 +18,24 @@ Phase B-1/B-2/C-1 도메인: Direct Answer + Evidence Chain 작성, 근거 4축 
 
 <!-- append entries below this line -->
 
-## 2026-04-15 — answer-formulator↔critic 독립성 유지
-- **Rule**: critic은 answer-formulator의 산출물만 읽고 동일 세션 프롬프트·프리셋을 공유하지 않는다 — 별도 agent thread에서 활성화한다
-- **Why**: 같은 컨텍스트에서 생성과 비판을 섞으면 "자기 방어 편향"으로 약점을 축소하게 되어 Evidence 4축 점수가 부풀려진다
-- **When to apply**: Phase B-2에서 critic 활성 시 — answers/<slug>.md를 독립 입력으로 받아 4축(Grounding Validity / Support Strength / Counter-Evidence / Verifiability) 평가
+## 2026-04-15 — answer-formulator ↔ critic independence
+- **Rule**: critic reads only the answer-formulator output and does NOT share the same session prompt or presets — it is activated in a separate agent thread
+- **Why**: mixing generation and criticism in the same context creates "self-defense bias" that shrinks weaknesses, which inflates the 4-axis Evidence scores
+- **When to apply**: when activating critic at Phase B-2 — take `answers/<slug>.md` as independent input and score on the 4 axes (Grounding Validity / Support Strength / Counter-Evidence / Verifiability)
 
-## 2026-04-15 — codex 교차 검증 통과 기준
-- **Rule**: 각 Evidence가 Grounding≥3 AND Support≥3 AND Verifiability≥3 AND codex-review 통과 네 조건을 모두 만족할 때 Answer를 C-1 planner로 넘긴다
-- **Why**: 내부 critic 점수만으로는 echo chamber를 벗어나지 못했고, codex는 독립 moderator 역할을 한다
-- **When to apply**: Phase B-2 종료 전 — 어느 한 조건이라도 실패 시 answer-formulator로 재작업 요청
+## 2026-04-15 — codex cross-validation pass criteria
+- **Rule**: an Answer moves to the C-1 planner only when every Evidence satisfies all four conditions: Grounding ≥ 3 AND Support ≥ 3 AND Verifiability ≥ 3 AND codex-review pass
+- **Why**: internal critic scores alone couldn't escape the echo chamber; codex plays the independent moderator role
+- **When to apply**: before the end of Phase B-2 — if any condition fails, send back to answer-formulator for rework
 
-## 2026-04-15 — PLAN.md는 IV/DV/control을 명시해야 한다
-- **Rule**: experiment-planner가 작성하는 PLAN.md는 Evidence 매핑·IV·DV·control·baseline·metric·ablation·resource·Expected Under/If Wrong 섹션을 필수로 포함한다
-- **Why**: IV/DV가 빠진 PLAN은 code-implementer가 해석을 추측으로 채우게 되어 결과 해석 단계에서 Evidence verdict(CONFIRMED/REFUTED/INCONCLUSIVE/IMPL_BUG)를 결정할 수 없다
-- **When to apply**: Phase C-1 산출물 gate — 빠진 섹션 발견 시 즉시 반려
+## 2026-04-15 — PLAN.md must specify IV/DV/control
+- **Rule**: the PLAN.md written by experiment-planner MUST include Evidence mapping, IV, DV, control, baseline, metric, ablation, resource, and Expected Under / If Wrong sections
+- **Why**: a PLAN missing IV/DV forces code-implementer to fill in interpretation by guessing, which makes it impossible to decide the Evidence verdict (CONFIRMED / REFUTED / INCONCLUSIVE / IMPL_BUG) during result interpretation
+- **When to apply**: as the Phase C-1 artifact gate — if any required section is missing, reject immediately
 
 ## 2026-04-15 — Evidence grounding first, then Direct Answer
-- **Rule**: answer-formulator는 먼저 hybrid_query로 RAG chunk + KG matched Paper/Claim을 수집하고, 그 결과를 citation과 함께 answers/<slug>.md에 기록한 뒤에만 Direct Answer 문단과 Evidence Chain을 작성한다
-- **Why**: 근거 수집 없이 작성된 Answer는 fabrication 위험이 크고, critic의 Grounding Validity 축에서 0점 맞아 재작업 비용이 커진다
-- **When to apply**: Phase B-1 시작 시 — hybrid_query.py 실행 로그와 top-k chunk/node를 answers 파일 상단에 붙인다
+- **Rule**: answer-formulator first runs hybrid_query to collect RAG chunks + KG-matched Paper/Claim, records the results with citations in `answers/<slug>.md`, and ONLY THEN writes the Direct Answer paragraph and Evidence Chain
+- **Why**: answers written without grounding carry high fabrication risk and score 0 on the critic's Grounding Validity axis, causing expensive rework
+- **When to apply**: at the start of Phase B-1 — paste the `hybrid_query.py` execution log and top-k chunks/nodes at the top of the answers file
 
 <!-- seeded 2026-04-15 -->
